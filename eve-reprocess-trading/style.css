@@ -43,11 +43,18 @@ label {
 }
 
 .output {
+    width: 200px;
+    min-height: 45px;
+    min-width: 200px;
     background-color: #f2f2f2;
     padding: 6px 12px;
     border-radius: 8px;
     margin: 6px 0;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .effective-label {
@@ -110,7 +117,14 @@ label {
     text-align: center !important;
     vertical-align: middle;
 }
+
 .eve-reprocess-table th {
     font-weight: bold !important;
 }
 
+#generate_btn {
+    margin-top: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
