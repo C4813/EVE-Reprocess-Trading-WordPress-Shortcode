@@ -1,44 +1,41 @@
-<?php
-/* template.php */
-?>
+<?php /* template.php */ ?>
 <div class="eve-reprocess-wrapper">
+    <label>Select Trade Hub:
+        <select id="hub_select" class="eve-input">
+            <option value="jita" selected>Jita</option>
+            <option value="amarr">Amarr</option>
+            <option value="rens">Rens</option>
+            <option value="hek">Hek</option>
+            <option value="dodixie">Dodixie</option>
+        </select>
+    </label>
+
+    <label>Include Secondary Trade Hubs:
+        <select id="include_secondary" class="eve-input">
+            <option value="no" selected>No</option>
+            <option value="yes">Yes</option>
+        </select>
+    </label>
+
     <div class="eve-skills-columns">
         <div class="eve-col eve-border-right">
-            <label>Accounting
-                <select id="skill_accounting" class="eve-input">
-                    <?php for ($i = 0; $i <= 5; $i++): ?>
-                        <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
-                    <?php endfor; ?>
-                </select>
-            </label>
-            <label>Broker Relations
-                <select id="skill_broker" class="eve-input">
-                    <?php for ($i = 0; $i <= 5; $i++): ?>
-                        <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
-                    <?php endfor; ?>
-                </select>
-            </label>
-            <label>Connections
-                <select id="skill_connections" class="eve-input">
-                    <?php for ($i = 0; $i <= 5; $i++): ?>
-                        <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
-                    <?php endfor; ?>
-                </select>
-            </label>
-            <label>Criminal Connections
-                <select id="skill_criminal" class="eve-input">
-                    <?php for ($i = 0; $i <= 5; $i++): ?>
-                        <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
-                    <?php endfor; ?>
-                </select>
-            </label>
-            <label>Diplomacy
-                <select id="skill_diplomacy" class="eve-input">
-                    <?php for ($i = 0; $i <= 5; $i++): ?>
-                        <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
-                    <?php endfor; ?>
-                </select>
-            </label>
+            <?php
+            $skills = [
+                'Accounting' => 'skill_accounting',
+                'Broker Relations' => 'skill_broker',
+                'Connections' => 'skill_connections',
+                'Criminal Connections' => 'skill_criminal',
+                'Diplomacy' => 'skill_diplomacy'
+            ];
+            foreach ($skills as $label => $id): ?>
+                <label><?= $label ?>
+                    <select id="<?= $id ?>" class="eve-input">
+                        <?php for ($i = 0; $i <= 5; $i++): ?>
+                            <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </label>
+            <?php endforeach; ?>
         </div>
         <div class="eve-col">
             <label>Faction</label>
@@ -47,19 +44,15 @@
             <label>Base Faction Standing
                 <input type="number" id="faction_standing" class="eve-input" value="0" step="0.01">
             </label>
-            <div class="output"><span class="effective-label">Effective:</span><span id="derived_faction_standing">0.00</span></div>
+            <div class="output"><span class="effective-label">Effective:</span> <span id="derived_faction_standing">0.00</span></div>
 
-            <label>Corporation
-                <select id="corp_select" class="eve-input">
-                    <?php foreach ($corpList as $corp): ?>
-                        <option value="<?= esc_attr($corp) ?>" <?= $corp === 'Caldari Navy' ? 'selected' : '' ?>><?= esc_html($corp) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
+            <label>Corporation</label>
+            <div class="output" id="corp_display">Caldari Navy</div>
+
             <label>Base Corp Standing
                 <input type="number" id="corp_standing" class="eve-input" value="0" step="0.01">
             </label>
-            <div class="output"><span class="effective-label">Effective:</span><span id="derived_corp_standing">0.00</span></div>
+            <div class="output"><span class="effective-label">Effective:</span> <span id="derived_corp_standing">0.00</span></div>
         </div>
     </div>
 
@@ -76,28 +69,19 @@
         </div>
     </div>
 
-    <table class="eve-reprocess-table">
-        <thead>
-            <tr>
-                <th>Mineral</th>
-                <th>Buy Price</th>
-                <th>Sell Price</th>
-                <th>Daily Forge Volume</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            $orderedMinerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
-            foreach ($orderedMinerals as $mineral):
-                if (!isset($buy[$mineral])) continue;
-            ?>
+    <button id="generate_btn" class="eve-input" style="margin-top: 20px;">Generate</button>
+
+    <div id="price_table_wrapper" style="display:none;">
+        <table class="eve-reprocess-table">
+            <thead>
                 <tr>
-                    <td><?= esc_html($mineral) ?></td>
-                    <td><?= number_format($buy[$mineral], 2) ?></td>
-                    <td><?= number_format($sell[$mineral], 2) ?></td>
-                    <td><?= number_format($volumes[$mineral]) ?></td>
+                    <th>Mineral</th>
+                    <th>Buy Price</th>
+                    <th>Sell Price</th>
+                    <th id="region_volume_header">Daily Volume</th>
                 </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </div>
