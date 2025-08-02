@@ -1,1 +1,116 @@
+.eve-reprocess-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: inherit;
+    text-align: center;
+}
+
+.eve-skills-columns,
+.eve-result-row {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: center;
+    gap: 40px;
+}
+
+.eve-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.eve-border-right {
+    border-right: 2px solid #ccc;
+    padding-right: 20px;
+    margin-right: 20px;
+}
+
+label {
+    font-weight: bold;
+    margin: 10px 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.eve-input {
+    width: 200px;
+    height: 45px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.output {
+    background-color: #f2f2f2;
+    padding: 6px 12px;
+    border-radius: 8px;
+    margin: 6px 0;
+    font-size: 14px;
+}
+
+.effective-label {
+    font-weight: bold !important;
+    margin-right: 5px;
+}
+
+#result_skills,
+#result_main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.eve-result-box {
+    background-color: #f2f2f2;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: inline-block;
+    text-align: center;
+    max-width: 280px;
+}
+
+.eve-result-row .eve-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.eve-result-row .eve-col:first-child {
+    border-right: 2px solid #ccc;
+    padding-right: 20px;
+    margin-right: 20px;
+}
+
+#result_main div {
+    margin: 3px 0;
+}
+
+#result_main strong {
+    font-weight: bold !important;
+}
+
+#result_main span {
+    font-weight: normal !important;
+}
+
+.eve-reprocess-table {
+    margin: 30px auto 0;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.eve-reprocess-table th,
+.eve-reprocess-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center !important;
+    vertical-align: middle;
+}
+.eve-reprocess-table th {
+    font-weight: bold !important;
+}
 
