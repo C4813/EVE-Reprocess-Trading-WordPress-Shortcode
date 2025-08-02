@@ -1,6 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
     const corpSelect = document.getElementById('corp_select');
     const factionDisplay = document.getElementById('faction_display');
+    const hubSelect = document.getElementById('hub_select');
+    const generateBtn = document.getElementById('generate_btn');
+    const includeSecondarySelect = document.getElementById('include_secondary');
+    const tableWrapper = document.getElementById('price_table_wrapper');
+    const mineralTable = document.querySelector('.eve-reprocess-table tbody');
+    const regionHeader = document.getElementById('region_volume_header');
+
+    const hubToRegion = {
+        jita: "The Forge",
+        amarr: "Domain",
+        rens: "Heimatar",
+        hek: "Metropolis",
+        dodixie: "Sinq Laison"
+    };
+
+    const hubToFactionCorp = {
+        jita:      { faction: "Caldari State",       corp: "Caldari Navy" },
+        amarr:     { faction: "Amarr Empire",        corp: "Emperor Family" },
+        rens:      { faction: "Minmatar Republic",   corp: "Brutor Tribe" },
+        hek:       { faction: "Minmatar Republic",   corp: "Boundless Creations" },
+        dodixie:   { faction: "Gallente Federation", corp: "Federation Navy" }
+    };
 
     function safeParse(val) {
         const parsed = parseFloat(val);
@@ -34,6 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return 7.5 * (1 - (0.11 * accountingSkill));
     }
 
+    function updateFactionAndCorp() {
+        const hub = hubSelect.value;
+        const data = hubToFactionCorp[hub];
+        factionDisplay.textContent = data?.faction || "Caldari State";
+        if (corpSelect) {
+            corpSelect.innerHTML = `<option>${data?.corp || "Caldari Navy"}</option>`;
+        }
+    }
+
+    function updateRegionVolumeHeader() {
+        const hub = hubSelect.value;
+        const region = hubToRegion[hub] || "Region";
+        regionHeader.textContent = `Daily ${region} Volume`;
+    }
+
     function updateResults() {
         const accounting = safeParse(document.getElementById('skill_accounting').value);
         const broker = safeParse(document.getElementById('skill_broker').value);
@@ -42,10 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const diplo = safeParse(document.getElementById('skill_diplomacy').value);
         const baseFaction = safeParse(document.getElementById('faction_standing').value);
         const baseCorp = safeParse(document.getElementById('corp_standing').value);
-        const corp = corpSelect.value;
-
-        const faction = EVE_DATA.corpToFaction[corp] || 'Caldari State';
-        factionDisplay.textContent = faction;
+        const corp = corpSelect ? corpSelect.value : "";
 
         const factionEff = applyEffectiveStanding(baseFaction, 'Connections', conn, crim, diplo);
         const corpEff = applyEffectiveStanding(baseCorp, 'Connections', conn, crim, diplo);
@@ -69,24 +103,65 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // Populate corp dropdown
-    EVE_DATA.corpList.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        corpSelect.appendChild(option);
+    generateBtn.addEventListener('click', () => {
+        generateBtn.disabled = true;
+        generateBtn.textContent = "Loading...";
+
+        const hub = hubSelect.value;
+        const includeSecondary = includeSecondarySelect.value === "yes";
+
+        fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hub, includeSecondary })
+        })
+        .then(r => r.text())
+        .then(raw => {
+            console.log("RAW PRICE API RESPONSE:", raw);
+        
+            try {
+                const data = JSON.parse(raw);
+        
+                mineralTable.innerHTML = '';
+                const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
+                minerals.forEach(mineral => {
+                    if (data.buy[mineral] === 0 && data.sell[mineral] === 0 && data.volumes[mineral] === 0) return;
+                    mineralTable.innerHTML += `
+                        <tr>
+                            <td>${mineral}</td>
+                            <td>${data.buy[mineral].toFixed(2)}</td>
+                            <td>${data.sell[mineral].toFixed(2)}</td>
+                            <td>${Math.round(data.volumes[mineral])}</td>
+                        </tr>`;
+                });
+                tableWrapper.style.display = 'block';
+            } catch (err) {
+                console.error("Failed to parse JSON response from price_api.php:");
+                console.error(raw);  // Log the invalid content
+                console.error(err);  // Log the actual parsing error
+            }
+        })
+        .catch(err => {
+            console.error("Error fetching price data:", err);
+        })
+        .finally(() => {
+            generateBtn.disabled = false;
+            generateBtn.textContent = "Generate";
+        });
     });
 
-    // Set default selection to "Caldari Navy"
-    const defaultCorp = "Caldari Navy";
-    const defaultIndex = [...corpSelect.options].findIndex(opt => opt.value === defaultCorp);
-    if (defaultIndex !== -1) corpSelect.selectedIndex = defaultIndex;
+    hubSelect.addEventListener('change', () => {
+        updateFactionAndCorp();
+        updateRegionVolumeHeader();
+        updateResults();
+    });
 
-    // Bind event listeners
-    corpSelect.addEventListener('change', updateResults);
     document.querySelectorAll('select, input[type="number"]').forEach(el => {
         el.addEventListener('input', updateResults);
     });
 
+    // Initialize
+    updateFactionAndCorp();
+    updateRegionVolumeHeader();
     updateResults();
 });
