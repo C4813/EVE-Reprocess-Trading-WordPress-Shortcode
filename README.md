@@ -19,7 +19,7 @@ This plugin is designed to replace and enhance my current [EVE Reprocessing Mast
   - [ ] generate pastable market quickbar
     - [ ] based on user-defined margin percentage
        
-- [ ] Code cleanup and optimization
+  - [ ] Code cleanup and optimization
 
 ## Known issues
-  - [ ] Daily X Volume text updates before regenerating results, potentially causing confusion
+- [ ] Daily X Volume text updates before regenerating results, potentially causing confusion
