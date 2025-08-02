@@ -1,33 +1,7 @@
 <?php
 /* template.php */
-
-$hubs = ['jita', 'amarr', 'dodixie', 'rens', 'hek'];
-$selectedHub = $_GET['hub'] ?? 'jita';
-
-$hubCorpMap = [
-    'jita' => 'Caldari Navy',
-    'amarr' => 'Emperor Family',
-    'dodixie' => 'Federation Navy',
-    'rens' => 'Brutor Tribe',
-    'hek' => 'Boundless Creations'
-];
-
-$selectedCorp = $hubCorpMap[$selectedHub] ?? 'Caldari Navy';
-$selectedFaction = $corpFactionMap[$selectedCorp] ?? 'Caldari State';
 ?>
-
 <div class="eve-reprocess-wrapper">
-    <form method="get" id="hub-selector-form">
-        <label for="eve-market-hub-select"><strong>Select Trade Hub:</strong></label>
-        <select id="eve-market-hub-select" name="hub" onchange="document.getElementById('hub-selector-form').submit();">
-            <?php foreach ($hubs as $hub): ?>
-                <option value="<?= $hub ?>" <?= $hub === $selectedHub ? 'selected' : '' ?>>
-                    <?= ucfirst($hub) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </form>
-
     <div class="eve-skills-columns">
         <div class="eve-col eve-border-right">
             <label>Accounting
@@ -66,29 +40,26 @@ $selectedFaction = $corpFactionMap[$selectedCorp] ?? 'Caldari State';
                 </select>
             </label>
         </div>
-
         <div class="eve-col">
             <label>Faction</label>
-            <div class="output" id="faction_display"><?= esc_html($selectedFaction) ?></div>
+            <div class="output" id="faction_display">Caldari State</div>
 
             <label>Base Faction Standing
                 <input type="number" id="faction_standing" class="eve-input" value="0" step="0.01">
             </label>
-            <div class="output">
-                <span class="effective-label">Effective:</span>
-                <span id="derived_faction_standing">0.00</span>
-            </div>
+            <div class="output"><span class="effective-label">Effective:</span><span id="derived_faction_standing">0.00</span></div>
 
-            <label>Corporation</label>
-            <div class="output" id="corp_display"><?= esc_html($selectedCorp) ?></div>
-
+            <label>Corporation
+                <select id="corp_select" class="eve-input">
+                    <?php foreach ($corpList as $corp): ?>
+                        <option value="<?= esc_attr($corp) ?>" <?= $corp === 'Caldari Navy' ? 'selected' : '' ?>><?= esc_html($corp) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
             <label>Base Corp Standing
                 <input type="number" id="corp_standing" class="eve-input" value="0" step="0.01">
             </label>
-            <div class="output">
-                <span class="effective-label">Effective:</span>
-                <span id="derived_corp_standing">0.00</span>
-            </div>
+            <div class="output"><span class="effective-label">Effective:</span><span id="derived_corp_standing">0.00</span></div>
         </div>
     </div>
 
