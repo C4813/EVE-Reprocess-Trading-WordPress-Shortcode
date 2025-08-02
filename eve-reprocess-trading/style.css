@@ -5,36 +5,26 @@
     text-align: center;
 }
 
-#hub-selector-form {
-    margin-bottom: 20px;
-}
-
 .eve-skills-columns,
 .eve-result-row {
     display: flex;
     justify-content: center;
     align-items: flex-start;
     text-align: center;
-    max-width: 900px;
-    margin: 0 auto;
+    gap: 40px;
 }
 
-.eve-skills-columns {
-    margin-bottom: 30px;
-}
-
-.eve-skills-columns > .eve-col,
-.eve-result-row > .eve-col {
-    padding: 0 20px;
+.eve-col {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
 }
 
 .eve-border-right {
     border-right: 2px solid #ccc;
     padding-right: 20px;
+    margin-right: 20px;
 }
 
 label {
@@ -58,8 +48,6 @@ label {
     border-radius: 8px;
     margin: 6px 0;
     font-size: 14px;
-    min-width: 200px;
-    text-align: center;
 }
 
 .effective-label {
@@ -73,7 +61,6 @@ label {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 100%;
 }
 
 .eve-result-box {
@@ -81,13 +68,21 @@ label {
     padding: 10px 20px;
     border-radius: 10px;
     font-size: 14px;
+    display: inline-block;
+    text-align: center;
+    max-width: 280px;
+}
+
+.eve-result-row .eve-col {
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
-    width: 100%;
-    max-width: 280px;
-    margin: 0 auto;
+}
+
+.eve-result-row .eve-col:first-child {
+    border-right: 2px solid #ccc;
+    padding-right: 20px;
+    margin-right: 20px;
 }
 
 #result_main div {
@@ -115,7 +110,6 @@ label {
     text-align: center !important;
     vertical-align: middle;
 }
-
 .eve-reprocess-table th {
     font-weight: bold !important;
 }
