@@ -116,18 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `${name} - marketGroupID: ${marketGroupID}, topGroup: ${topGroup}`;
             });
 
-        if (results.length === 0) {
-            marketGroupResults.innerHTML = `<li><em>No items found for this group</em></li>`;
-        } else {
-            marketGroupResults.innerHTML = results.map(line => `<li>${line}</li>`).join('');
-        }
+        marketGroupResults.innerHTML = results.length === 0
+            ? `<li><em>No items found for this group</em></li>`
+            : results.map(line => `<li>${line}</li>`).join('');
 
         marketGroupResultsWrapper.style.display = 'block';
     }
 
     generateBtn.addEventListener('click', () => {
         generateBtn.disabled = true;
-        generateBtn.textContent = "Loading...";
+        generateBtn.innerHTML = `<span class="spinner"></span> Generating...`;
 
         const isPrivate = hubSelect.value === 'private';
         outputTableBody.innerHTML = '';
@@ -149,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tr>`;
             });
             regionHeader.style.display = 'none';
+            finishGenerate();
         } else {
             fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
                 method: 'POST',
@@ -175,15 +174,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>`;
                 });
                 regionHeader.style.display = '';
+                finishGenerate();
             })
-            .catch(err => console.error("Fetch error:", err));
+            .catch(err => {
+                console.error("Fetch error:", err);
+                finishGenerate();
+            });
         }
 
-        tableWrapper.style.display = 'block';
-        generateBtn.disabled = false;
-        generateBtn.textContent = "Generate";
-
-        updateMarketGroupResults();
+        function finishGenerate() {
+            tableWrapper.style.display = 'block';
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = `<span class="btn-text">Generate</span>`;
+            updateMarketGroupResults();
+        }
     });
 
     function loadJSON(url) {
