@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let invTypes = {};
     let marketGroups = {};
+    let reprocessYields = {};
 
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
@@ -110,7 +111,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
                 return topGroup === selectedTopGroup;
             })
-            .map(([name]) => name);
+            .map(([name, item]) => {
+                const typeID = item.typeID;
+                const yieldData = reprocessYields[typeID];
+                if (!yieldData) return name;
+
+                const components = Object.entries(yieldData)
+                    .map(([matID, qty]) => {
+                        const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
+                        const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
+                        return `${mineralName} x${qty}`;
+                    });
+
+                return `${name} [${components.join(', ')}]`;
+            });
 
         marketGroupResults.innerHTML = results.length === 0
             ? `<li><em>No items found for this group</em></li>`
@@ -192,10 +206,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     Promise.all([
         loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json')
-    ]).then(([types, groups]) => {
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json')
+    ]).then(([types, groups, yields]) => {
         invTypes = types;
         marketGroups = groups;
+        reprocessYields = yields;
     });
 
     hubSelect.addEventListener('change', () => {
