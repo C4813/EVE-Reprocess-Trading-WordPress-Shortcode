@@ -1,6 +1,6 @@
 <?php /* template.php */ ?>
 <div class="eve-reprocess-wrapper">
-    <label>Select Trade Hub:
+    <label>Trade Hub
         <select id="hub_select" class="eve-input">
             <option value="jita" selected>Jita</option>
             <option value="amarr">Amarr</option>
@@ -11,15 +11,8 @@
         </select>
     </label>
 
-    <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs:<br>
-        <select id="include_secondary" class="eve-input">
-            <option value="no" selected>No</option>
-            <option value="yes">Yes</option>
-        </select>
-    </label>
-
     <div id="custom_prices_wrapper" style="display:none; margin-top: 20px;">
-        <table id="custom_price_input_table" class="eve-reprocess-table">
+        <table class="eve-reprocess-table">
             <thead>
                 <tr>
                     <th>Mineral</th>
@@ -39,6 +32,22 @@
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+
+    <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs?
+        <select id="include_secondary" class="eve-input">
+            <option value="no" selected>No</option>
+            <option value="yes">Yes</option>
+        </select>
+    </label>
+
+    <div id="market_group_filter" style="margin-top: 30px;">
+        <label>Filter Market Group:
+            <select id="market_group_select" class="eve-input">
+                <option value="4">Ships</option>
+                <option value="9" selected>Ship Equipment</option>
+            </select>
+        </label>
     </div>
 
     <div class="eve-skills-columns" style="padding-top: 25px;">
@@ -89,7 +98,7 @@
                 <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
                 <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
                 <div><strong>Sales Tax:</strong> <span id="sales_tax">0.00%</span></div>
-                <div><strong>Yield:</strong> <span id="reprocess_yield">50.00%</span></div>
+                <div><strong>Reprocessing Yield:</strong> <span id="reprocess_yield">50.00%</span></div>
             </div>
         </div>
     </div>
@@ -108,5 +117,10 @@
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+
+    <div id="market_group_results_wrapper" style="display:none; margin-top: 20px;">
+        <h3>Items in Selected Market Group</h3>
+        <ul id="market_group_results"></ul>
     </div>
 </div>
