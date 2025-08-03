@@ -11,11 +11,13 @@
     justify-content: center;
     align-items: flex-start;
     text-align: center;
-    gap: 40px;
+    gap: 0;
+    padding-top: 25px;
 }
 
 .eve-col {
-    flex: 1;
+    flex: 1 1 0;
+    max-width: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -24,7 +26,7 @@
 .eve-border-right {
     border-right: 2px solid #ccc;
     padding-right: 20px;
-    margin-right: 20px;
+    margin-right: 0;
 }
 
 label {
