@@ -3,15 +3,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
     const tableWrapper = document.getElementById('price_table_wrapper');
+    const outputTable = document.getElementById('output_price_table');
+    const outputTableBody = outputTable.querySelector('tbody');
     const regionHeader = document.getElementById('region_volume_header');
-    const outputTableBody = document.querySelector('#output_price_table tbody');
+    const customPriceWrapper = document.getElementById('custom_prices_wrapper');
+    const standingInputsWrapper = document.getElementById('standing_inputs_wrapper');
+    const customBrokerageWrapper = document.getElementById('custom_brokerage_wrapper');
+    const resultSkillsBox = document.getElementById('result_skills');
+    const factionLabel = document.getElementById('faction_label');
+    const corpLabel = document.getElementById('corp_label');
+    const factionInput = document.getElementById('faction_standing_input');
+    const corpInput = document.getElementById('corp_standing_input');
+    const factionResult = document.getElementById('faction_standing_result');
+    const corpResult = document.getElementById('corp_standing_result');
+    const brokerFeeOutput = document.getElementById('broker_fee');
+    const taxOutput = document.getElementById('reprocess_tax');
+    const salesTaxOutput = document.getElementById('sales_tax');
+    const yieldOutput = document.getElementById('reprocess_yield');
+    const customBrokerageInput = document.getElementById('custom_brokerage_input');
+    const customTaxInput = document.getElementById('custom_tax_input');
 
-    const hubToRegion = {
-        jita: "The Forge",
-        amarr: "Domain",
-        rens: "Heimatar",
-        hek: "Metropolis",
-        dodixie: "Sinq Laison"
+    const marketGroupSelect = document.getElementById('market_group_select');
+    const marketGroupResultsWrapper = document.getElementById('market_group_results_wrapper');
+    const marketGroupResults = document.getElementById('market_group_results');
+
+    let invTypes = {};
+    let marketGroups = {};
+
+    const hubToFactionCorp = {
+        jita: { faction: "Caldari State", corp: "Caldari Navy" },
+        amarr: { faction: "Amarr Empire", corp: "Emperor Family" },
+        rens: { faction: "Minmatar Republic", corp: "Brutor Tribe" },
+        hek: { faction: "Minmatar Republic", corp: "Boundless Creations" },
+        dodixie: { faction: "Gallente Federation", corp: "Federation Navy" },
     };
 
     function safeParse(val) {
@@ -19,22 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return isNaN(parsed) ? 0 : parsed;
     }
 
+    function getTopLevelGroup(marketGroupID) {
+        let current = marketGroups[marketGroupID];
+        while (current && current.parentGroupID !== "None") {
+            marketGroupID = current.parentGroupID;
+            current = marketGroups[marketGroupID];
+        }
+        return marketGroupID;
+    }
+
     function updateFactionAndCorp() {
         const hub = hubSelect.value;
-        const hubToFactionCorp = {
-            jita:      { faction: "Caldari State",       corp: "Caldari Navy" },
-            amarr:     { faction: "Amarr Empire",        corp: "Emperor Family" },
-            rens:      { faction: "Minmatar Republic",   corp: "Brutor Tribe" },
-            hek:       { faction: "Minmatar Republic",   corp: "Boundless Creations" },
-            dodixie:   { faction: "Gallente Federation", corp: "Federation Navy" }
-        };
         const data = hubToFactionCorp[hub] || { faction: "[Faction]", corp: "[Corporation]" };
-
-        const factionLabel = document.getElementById('faction_label');
-        const corpLabel = document.getElementById('corp_label');
-
-        if (factionLabel) factionLabel.textContent = `Base ${data.faction} Standing`;
-        if (corpLabel) corpLabel.textContent = `Base ${data.corp} Standing`;
+        factionLabel.textContent = `Base ${data.faction} Standing`;
+        corpLabel.textContent = `Base ${data.corp} Standing`;
     }
 
     function updateResults() {
@@ -45,8 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const diplo = safeParse(document.getElementById('skill_diplomacy').value);
         const scrap = safeParse(document.getElementById('skill_scrapmetal').value);
 
-        const baseFaction = safeParse(document.getElementById('faction_standing_input').value);
-        const baseCorp = safeParse(document.getElementById('corp_standing_input').value);
+        const baseFaction = safeParse(factionInput.value);
+        const baseCorp = safeParse(corpInput.value);
 
         const isPrivate = hubSelect.value === 'private';
 
@@ -54,32 +76,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const corpEff = baseCorp < 0 ? baseCorp + ((10 - baseCorp) * 0.04 * diplo) : baseCorp + ((10 - baseCorp) * 0.04 * conn);
 
         const brokerFee = isPrivate
-            ? safeParse(document.getElementById('custom_brokerage_input').value)
+            ? safeParse(customBrokerageInput.value)
             : Math.max(0, 3 - (0.3 * broker) - (0.03 * baseFaction) - (0.02 * baseCorp));
 
         const reprocessTax = isPrivate
-            ? safeParse(document.getElementById('custom_tax_input').value)
+            ? safeParse(customTaxInput.value)
             : corpEff <= 0 ? 5.0 : corpEff < 6.67 ? +(0.05 * (1 - corpEff / 6.67)).toFixed(4) * 100 : 0;
 
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
 
-        document.getElementById('faction_standing_result').textContent = isPrivate ? '' : `Effective: ${factionEff.toFixed(2)}`;
-        document.getElementById('corp_standing_result').textContent = isPrivate ? '' : `Effective: ${corpEff.toFixed(2)}`;
+        factionResult.textContent = isPrivate ? '' : `Effective: ${factionEff.toFixed(2)}`;
+        corpResult.textContent = isPrivate ? '' : `Effective: ${corpEff.toFixed(2)}`;
 
-        document.getElementById('broker_fee').textContent = `${brokerFee.toFixed(2)}%`;
-        document.getElementById('reprocess_tax').textContent = `${reprocessTax.toFixed(2)}%`;
-        document.getElementById('sales_tax').textContent = `${salesTax.toFixed(2)}%`;
-        document.getElementById('reprocess_yield').textContent = `${yieldPercent.toFixed(2)}%`;
+        brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
+        taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
+        salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
+        yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
 
-        const resultSkills = document.getElementById('result_skills');
-        resultSkills.style.display = isPrivate ? 'none' : 'block';
+        resultSkillsBox.style.display = isPrivate ? 'none' : 'block';
         if (!isPrivate) {
-            resultSkills.innerHTML = `
+            resultSkillsBox.innerHTML = `
                 <div><strong>Skill Used (Faction)</strong><br><i>${baseFaction < 0 ? 'Diplomacy' : 'Connections'}</i></div>
                 <div><strong>Skill Used (Corp)</strong><br><i>${baseCorp < 0 ? 'Diplomacy' : 'Connections'}</i></div>
             `;
         }
+    }
+
+    function updateMarketGroupResults() {
+        const selectedTopGroup = marketGroupSelect.value;
+        const results = Object.entries(invTypes)
+            .filter(([name, item]) => {
+                const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
+                return topGroup === selectedTopGroup;
+            })
+            .map(([name, item]) => {
+                const marketGroupID = item.marketGroupID ?? 'null';
+                const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : 'None';
+                return `${name} - marketGroupID: ${marketGroupID}, topGroup: ${topGroup}`;
+            });
+
+        if (results.length === 0) {
+            marketGroupResults.innerHTML = `<li><em>No items found for this group</em></li>`;
+        } else {
+            marketGroupResults.innerHTML = results.map(line => `<li>${line}</li>`).join('');
+        }
+
+        marketGroupResultsWrapper.style.display = 'block';
     }
 
     generateBtn.addEventListener('click', () => {
@@ -88,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isPrivate = hubSelect.value === 'private';
         outputTableBody.innerHTML = '';
+        marketGroupResultsWrapper.style.display = 'none';
 
         if (isPrivate) {
             const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
@@ -104,8 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${sell.toFixed(2)}</td>
                     </tr>`;
             });
-
-            document.getElementById('region_volume_header').style.display = 'none';
+            regionHeader.style.display = 'none';
         } else {
             fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
                 method: 'POST',
@@ -131,8 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${Math.round(volume).toLocaleString()}</td>
                         </tr>`;
                 });
-
-                document.getElementById('region_volume_header').style.display = '';
+                regionHeader.style.display = '';
             })
             .catch(err => console.error("Fetch error:", err));
         }
@@ -140,23 +182,34 @@ document.addEventListener('DOMContentLoaded', () => {
         tableWrapper.style.display = 'block';
         generateBtn.disabled = false;
         generateBtn.textContent = "Generate";
+
+        updateMarketGroupResults();
+    });
+
+    function loadJSON(url) {
+        return fetch(url).then(r => r.json());
+    }
+
+    Promise.all([
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json')
+    ]).then(([types, groups]) => {
+        invTypes = types;
+        marketGroups = groups;
     });
 
     hubSelect.addEventListener('change', () => {
         const isPrivate = hubSelect.value === 'private';
-        document.getElementById('custom_prices_wrapper').style.display = isPrivate ? 'block' : 'none';
-        document.getElementById('custom_brokerage_wrapper').style.display = isPrivate ? 'block' : 'none';
-        document.getElementById('standing_inputs_wrapper').style.display = isPrivate ? 'none' : 'block';
-        document.getElementById('secondary_toggle_wrapper').style.display = isPrivate ? 'none' : 'block';
+        customPriceWrapper.style.display = isPrivate ? 'block' : 'none';
+        customBrokerageWrapper.style.display = isPrivate ? 'block' : 'none';
+        standingInputsWrapper.style.display = isPrivate ? 'none' : 'block';
+        includeSecondarySelect.parentElement.style.display = isPrivate ? 'none' : 'block';
 
         if (!isPrivate) updateFactionAndCorp();
-
         updateResults();
     });
 
-    document.querySelectorAll('select, input[type="number"]').forEach(el => {
-        el.addEventListener('input', updateResults);
-    });
+    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
 
     updateFactionAndCorp();
     updateResults();
