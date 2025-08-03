@@ -106,6 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMarketGroupResults() {
         const selectedTopGroup = marketGroupSelect.value;
+    
+        const yieldText = yieldOutput.textContent || "0%";
+        const yieldMatch = yieldText.match(/([\d.]+)%/);
+        const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
+    
         const results = Object.entries(invTypes)
             .filter(([name, item]) => {
                 const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
@@ -115,21 +120,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const typeID = item.typeID;
                 const yieldData = reprocessYields[typeID];
                 if (!yieldData) return name;
-
+    
                 const components = Object.entries(yieldData)
                     .map(([matID, qty]) => {
+                        const adjustedQty = Math.floor(qty * yieldPercent);
                         const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                         const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
-                        return `${mineralName} x${qty}`;
+                        return `${mineralName} x${adjustedQty}`;
                     });
-
+    
                 return `${name} [${components.join(', ')}]`;
             });
-
+    
         marketGroupResults.innerHTML = results.length === 0
             ? `<li><em>No items found for this group</em></li>`
             : results.map(name => `<li>${name}</li>`).join('');
-
+    
         marketGroupResultsWrapper.style.display = 'block';
     }
 
