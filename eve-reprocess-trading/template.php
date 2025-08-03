@@ -38,21 +38,15 @@
             <?php endforeach; ?>
         </div>
         <div class="eve-col">
-            <label>Faction</label>
-            <div class="output" id="faction_display">Caldari State</div>
-
-            <label>Base Faction Standing
-                <input type="number" id="faction_standing" class="eve-input" value="0" step="0.01">
+            <label><span id="faction_label">Base Caldari State Standing</span>
+                <input id="faction_standing_input" type="number" class="eve-input" step="0.01" value="0.0" />
             </label>
-            <div class="output"><span class="effective-label">Effective:</span> <span id="derived_faction_standing">0.00</span></div>
-
-            <label>Corporation</label>
-            <div class="output" id="corp_display">Caldari Navy</div>
-
-            <label>Base Corp Standing
-                <input type="number" id="corp_standing" class="eve-input" value="0" step="0.01">
+            <div id="faction_standing_result" class="output">Effective: 0.00</div>
+        
+            <label><span id="corp_label">Base Caldari Navy Standing</span>
+                <input id="corp_standing_input" type="number" class="eve-input" step="0.01" value="0.0" />
             </label>
-            <div class="output"><span class="effective-label">Effective:</span> <span id="derived_corp_standing">0.00</span></div>
+            <div id="corp_standing_result" class="output">Effective: 0.00</div>
         </div>
     </div>
 
