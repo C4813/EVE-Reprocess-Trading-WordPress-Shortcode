@@ -80,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const baseFaction = safeParse(document.getElementById('faction_standing_input').value);
         const baseCorp = safeParse(document.getElementById('corp_standing_input').value);
     
-        // Check for invalid standing range
         const invalid = (baseFaction < -10 || baseFaction > 10 || baseCorp < -10 || baseCorp > 10);
     
         if (invalid) {
@@ -150,6 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </tr>`;
                 });
                 tableWrapper.style.display = 'block';
+
+                // ✅ Update region volume header AFTER new data is displayed
+                updateRegionVolumeHeader();
             } catch (err) {
                 console.error("Failed to parse JSON response from price_api.php:");
                 console.error(raw);
@@ -167,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     hubSelect.addEventListener('change', () => {
         updateFactionAndCorp();
-        updateRegionVolumeHeader();
+        // ❌ Removed misleading volume header update here
         updateResults();
     });
 
@@ -177,6 +179,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize on page load
     updateFactionAndCorp();
-    updateRegionVolumeHeader();
     updateResults();
 });
