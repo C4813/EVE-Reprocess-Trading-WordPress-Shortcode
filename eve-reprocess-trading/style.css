@@ -39,7 +39,6 @@ label {
     width: 100%;
 }
 
-
 .eve-input {
     width: 200px;
     height: 45px;
@@ -134,4 +133,25 @@ label {
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
+}
+
+#market_group_results_wrapper {
+    display: none; /* Initially hidden, toggled by JS */
+    margin-top: 20px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+
+#market_group_results {
+    list-style-type: disc;
+    margin: 10px auto;
+    padding-left: 20px;
+    max-width: 900px;
+    font-size: 14px;
+}
+
+#market_group_results li {
+    margin: 4px 0;
 }
