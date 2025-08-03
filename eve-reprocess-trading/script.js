@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${mineral}</td>
                             <td>${data.buy[mineral].toFixed(2)}</td>
                             <td>${data.sell[mineral].toFixed(2)}</td>
-                            <td>${Math.round(data.volumes[mineral])}</td>
+                            <td>${Math.round(data.volumes[mineral]).toLocaleString()}</td>
                         </tr>`;
                 });
                 tableWrapper.style.display = 'block';
