@@ -1,10 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     const hubSelect = document.getElementById('hub_select');
-    const generateBtn = document.getElementById('generate_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
+    const secondaryToggleWrapper = document.getElementById('secondary_toggle_wrapper');
+    const customBrokerageWrapper = document.getElementById('custom_brokerage_wrapper');
+    const customBrokerageInput = document.getElementById('custom_brokerage_input');
+    const customTaxInput = document.getElementById('custom_tax_input');
+    const customPricesWrapper = document.getElementById('custom_prices_wrapper');
+    const generateBtn = document.getElementById('generate_btn');
     const tableWrapper = document.getElementById('price_table_wrapper');
-    const mineralTable = document.querySelector('.eve-reprocess-table tbody');
+    const mineralTable = document.querySelector('#output_price_table tbody');
     const regionHeader = document.getElementById('region_volume_header');
+    const standingInputsWrapper = document.getElementById('standing_inputs_wrapper');
+    const resultSkillsBox = document.getElementById('result_skills');
 
     const hubToRegion = {
         jita: "The Forge",
@@ -57,10 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateFactionAndCorp() {
         const hub = hubSelect.value;
         const data = hubToFactionCorp[hub] || { faction: "[Faction]", corp: "[Corporation]" };
-    
+
         const factionLabel = document.getElementById('faction_label');
         const corpLabel = document.getElementById('corp_label');
-    
+
         if (factionLabel) factionLabel.textContent = `Base ${data.faction} Standing`;
         if (corpLabel) corpLabel.textContent = `Base ${data.corp} Standing`;
     }
@@ -79,9 +86,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const diplo = safeParse(document.getElementById('skill_diplomacy').value);
         const baseFaction = safeParse(document.getElementById('faction_standing_input').value);
         const baseCorp = safeParse(document.getElementById('corp_standing_input').value);
-    
+        const customBrokerage = safeParse(customBrokerageInput.value);
+        const customTax = safeParse(customTaxInput.value);
+        const hub = hubSelect.value;
+
         const invalid = (baseFaction < -10 || baseFaction > 10 || baseCorp < -10 || baseCorp > 10);
-    
+
         if (invalid) {
             document.getElementById('faction_standing_result').textContent = "Invalid Standings Input";
             document.getElementById('corp_standing_result').textContent = "Invalid Standings Input";
@@ -94,23 +104,29 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             return;
         }
-    
+
         const factionEff = applyEffectiveStanding(baseFaction, 'Connections', conn, crim, diplo);
         const corpEff = applyEffectiveStanding(baseCorp, 'Connections', conn, crim, diplo);
-    
-        const brokerFee = calcBrokerFee(broker, baseFaction, baseCorp).toFixed(2);
-        const reprocessingTax = calcReprocessingTax(baseCorp, conn).toFixed(2);
+
+        const brokerFee = hub === "private"
+            ? customBrokerage.toFixed(2)
+            : calcBrokerFee(broker, baseFaction, baseCorp).toFixed(2);
+
+        const reprocessingTax = hub === "private"
+            ? customTax.toFixed(2)
+            : calcReprocessingTax(baseCorp, conn).toFixed(2);
+
         const salesTax = calcSalesTax(accounting).toFixed(2);
-    
+
         document.getElementById('faction_standing_result').textContent = factionEff.toFixed(2);
         document.getElementById('corp_standing_result').textContent = corpEff.toFixed(2);
         document.getElementById('broker_fee').textContent = `${brokerFee}%`;
         document.getElementById('reprocess_tax').textContent = `${reprocessingTax}%`;
         document.getElementById('sales_tax').textContent = `${salesTax}%`;
-    
+
         const skillUsedFaction = (baseFaction < 0) ? 'Diplomacy' : 'Connections';
         const skillUsedCorp = (baseCorp < 0) ? 'Diplomacy' : 'Connections';
-    
+
         document.getElementById('result_skills').innerHTML = `
             <div><strong>Skill Used (Faction)</strong><br><i>${skillUsedFaction}</i></div>
             <div><strong>Skill Used (Corp)</strong><br><i>${skillUsedCorp}</i></div>
@@ -120,8 +136,36 @@ document.addEventListener('DOMContentLoaded', () => {
     generateBtn.addEventListener('click', () => {
         generateBtn.disabled = true;
         generateBtn.textContent = "Loading...";
-
         const hub = hubSelect.value;
+
+        if (hub === "private") {
+            // Use custom inputs
+            const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
+            mineralTable.innerHTML = '';
+            regionHeader.style.display = "none";
+
+            minerals.forEach(mineral => {
+                const buyInput = document.querySelector(`.custom-buy[data-mineral="${mineral}"]`);
+                const sellInput = document.querySelector(`.custom-sell[data-mineral="${mineral}"]`);
+                const buy = safeParse(buyInput?.value);
+                const sell = safeParse(sellInput?.value);
+                if (buy === 0 && sell === 0) return;
+                mineralTable.innerHTML += `
+                    <tr>
+                        <td>${mineral}</td>
+                        <td>${buy.toFixed(2)}</td>
+                        <td>${sell.toFixed(2)}</td>
+                        <td style="display:none;">–</td>
+                    </tr>`;
+            });
+
+            tableWrapper.style.display = 'block';
+            generateBtn.disabled = false;
+            generateBtn.textContent = "Generate";
+            return;
+        }
+
+        regionHeader.style.display = "table-cell";
         const includeSecondary = includeSecondarySelect.value === "yes";
 
         fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
@@ -148,9 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${Math.round(data.volumes[mineral]).toLocaleString()}</td>
                         </tr>`;
                 });
-                tableWrapper.style.display = 'block';
 
-                // ✅ Update region volume header AFTER new data is displayed
+                tableWrapper.style.display = 'block';
                 updateRegionVolumeHeader();
             } catch (err) {
                 console.error("Failed to parse JSON response from price_api.php:");
@@ -168,8 +211,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     hubSelect.addEventListener('change', () => {
+        const hub = hubSelect.value;
+        const isPrivate = hub === "private";
+    
+        secondaryToggleWrapper.style.display = isPrivate ? "none" : "block";
+        standingInputsWrapper.style.display = isPrivate ? "none" : "block";
+        customBrokerageWrapper.style.display = isPrivate ? "block" : "none";
+        customPricesWrapper.style.display = isPrivate ? "block" : "none";
+        resultSkillsBox.style.display = isPrivate ? "none" : "flex";
+    
         updateFactionAndCorp();
-        // ❌ Removed misleading volume header update here
+        if (!isPrivate) updateRegionVolumeHeader();
         updateResults();
     });
 
@@ -177,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('input', updateResults);
     });
 
-    // Initialize on page load
     updateFactionAndCorp();
     updateResults();
 });
