@@ -1,23 +1,45 @@
 <?php /* template.php */ ?>
 <div class="eve-reprocess-wrapper">
-    <label>Select Trade Hub:
+    <label>Trade Hub
         <select id="hub_select" class="eve-input">
             <option value="jita" selected>Jita</option>
             <option value="amarr">Amarr</option>
             <option value="rens">Rens</option>
             <option value="hek">Hek</option>
             <option value="dodixie">Dodixie</option>
+            <option value="private">Private Hub</option>
         </select>
     </label>
 
-    <label>Include Secondary Trade Hubs:
+    <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs?
         <select id="include_secondary" class="eve-input">
             <option value="no" selected>No</option>
             <option value="yes">Yes</option>
         </select>
     </label>
-
-    <div class="eve-skills-columns">
+    <div id="custom_prices_wrapper" style="display:none; margin-top: 20px;">
+        <table class="eve-reprocess-table">
+            <thead>
+                <tr>
+                    <th>Mineral</th>
+                    <th>Custom Buy Price</th>
+                    <th>Custom Sell Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
+                foreach ($minerals as $mineral): ?>
+                    <tr>
+                        <td><?= $mineral ?></td>
+                        <td><input type="number" step="0.01" class="eve-input custom-buy" data-mineral="<?= $mineral ?>" /></td>
+                        <td><input type="number" step="0.01" class="eve-input custom-sell" data-mineral="<?= $mineral ?>" /></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <div class="eve-skills-columns" style="padding-top: 25px;">
         <div class="eve-col eve-border-right">
             <?php
             $skills = [
@@ -38,20 +60,29 @@
             <?php endforeach; ?>
         </div>
         <div class="eve-col">
-            <label><span id="faction_label">Base Caldari State Standing</span>
-                <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
-            </label>
-            <div id="faction_standing_result" class="output">Effective: 0.00</div>
+            <div id="standing_inputs_wrapper">
+                <label><span id="faction_label">Base Caldari State Standing</span>
+                    <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
+                </label>
+                <div id="faction_standing_result" class="output">Effective: 0.00</div>
         
-            <label><span id="corp_label">Base Caldari Navy Standing</span>
-                <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
-            </label>
-            <div id="corp_standing_result" class="output">Effective: 0.00</div>
-
-            <!-- ⬇️ Skills Used Box moved here -->
+                <label><span id="corp_label">Base Caldari Navy Standing</span>
+                    <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
+                </label>
+                <div id="corp_standing_result" class="output">Effective: 0.00</div>
+            </div>
+        
+            <!-- Custom fee/tax input section (unchanged) -->
+            <div id="custom_brokerage_wrapper" style="display:none;">
+                <label>Private Hub Brokerage Fee (%):</label>
+                <input id="custom_brokerage_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
+        
+                <label style="margin-top: 15px;">Private Hub Reprocessing Tax (%):</label>
+                <input id="custom_tax_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
+            </div>
+        
             <div id="result_skills" class="eve-result-box" style="margin-top: 10px;"></div>
-
-            <!-- ⬇️ Tax and Fee Box -->
+        
             <div class="eve-result-box" id="result_main" style="margin-top: 10px;">
                 <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
                 <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
@@ -63,7 +94,7 @@
     <button id="generate_btn" class="eve-input" style="margin-top: 20px;">Generate</button>
 
     <div id="price_table_wrapper" style="display:none;">
-        <table class="eve-reprocess-table">
+        <table id="output_price_table" class="eve-reprocess-table">
             <thead>
                 <tr>
                     <th>Mineral</th>
