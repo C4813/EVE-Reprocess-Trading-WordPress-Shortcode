@@ -1,6 +1,6 @@
 <?php /* template.php */ ?>
 <div class="eve-reprocess-wrapper">
-    <label>Trade Hub
+    <label>Select Trade Hub:
         <select id="hub_select" class="eve-input">
             <option value="jita" selected>Jita</option>
             <option value="amarr">Amarr</option>
@@ -11,14 +11,15 @@
         </select>
     </label>
 
-    <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs?
+    <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs:<br>
         <select id="include_secondary" class="eve-input">
             <option value="no" selected>No</option>
             <option value="yes">Yes</option>
         </select>
     </label>
+
     <div id="custom_prices_wrapper" style="display:none; margin-top: 20px;">
-        <table class="eve-reprocess-table">
+        <table id="custom_price_input_table" class="eve-reprocess-table">
             <thead>
                 <tr>
                     <th>Mineral</th>
@@ -39,6 +40,7 @@
             </tbody>
         </table>
     </div>
+
     <div class="eve-skills-columns" style="padding-top: 25px;">
         <div class="eve-col eve-border-right">
             <?php
@@ -47,7 +49,8 @@
                 'Broker Relations' => 'skill_broker',
                 'Connections' => 'skill_connections',
                 'Criminal Connections' => 'skill_criminal',
-                'Diplomacy' => 'skill_diplomacy'
+                'Diplomacy' => 'skill_diplomacy',
+                'Scrapmetal Processing' => 'skill_scrapmetal'
             ];
             foreach ($skills as $label => $id): ?>
                 <label><?= $label ?>
@@ -65,28 +68,28 @@
                     <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
                 </label>
                 <div id="faction_standing_result" class="output">Effective: 0.00</div>
-        
+
                 <label><span id="corp_label">Base Caldari Navy Standing</span>
                     <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
                 </label>
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
             </div>
-        
-            <!-- Custom fee/tax input section (unchanged) -->
+
             <div id="custom_brokerage_wrapper" style="display:none;">
                 <label>Private Hub Brokerage Fee (%):</label>
                 <input id="custom_brokerage_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
-        
+
                 <label style="margin-top: 15px;">Private Hub Reprocessing Tax (%):</label>
                 <input id="custom_tax_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
             </div>
-        
+
             <div id="result_skills" class="eve-result-box" style="margin-top: 10px;"></div>
-        
+
             <div class="eve-result-box" id="result_main" style="margin-top: 10px;">
                 <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
                 <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
                 <div><strong>Sales Tax:</strong> <span id="sales_tax">0.00%</span></div>
+                <div><strong>Yield:</strong> <span id="reprocess_yield">50.00%</span></div>
             </div>
         </div>
     </div>
