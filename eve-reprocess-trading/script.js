@@ -19,6 +19,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return isNaN(parsed) ? 0 : parsed;
     }
 
+    function updateFactionAndCorp() {
+        const hub = hubSelect.value;
+        const hubToFactionCorp = {
+            jita:      { faction: "Caldari State",       corp: "Caldari Navy" },
+            amarr:     { faction: "Amarr Empire",        corp: "Emperor Family" },
+            rens:      { faction: "Minmatar Republic",   corp: "Brutor Tribe" },
+            hek:       { faction: "Minmatar Republic",   corp: "Boundless Creations" },
+            dodixie:   { faction: "Gallente Federation", corp: "Federation Navy" }
+        };
+        const data = hubToFactionCorp[hub] || { faction: "[Faction]", corp: "[Corporation]" };
+
+        const factionLabel = document.getElementById('faction_label');
+        const corpLabel = document.getElementById('corp_label');
+
+        if (factionLabel) factionLabel.textContent = `Base ${data.faction} Standing`;
+        if (corpLabel) corpLabel.textContent = `Base ${data.corp} Standing`;
+    }
+
     function updateResults() {
         const accounting = safeParse(document.getElementById('skill_accounting').value);
         const broker = safeParse(document.getElementById('skill_broker').value);
@@ -130,6 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('custom_brokerage_wrapper').style.display = isPrivate ? 'block' : 'none';
         document.getElementById('standing_inputs_wrapper').style.display = isPrivate ? 'none' : 'block';
         document.getElementById('secondary_toggle_wrapper').style.display = isPrivate ? 'none' : 'block';
+
+        if (!isPrivate) updateFactionAndCorp();
+
         updateResults();
     });
 
@@ -137,5 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('input', updateResults);
     });
 
+    updateFactionAndCorp();
     updateResults();
 });
