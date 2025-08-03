@@ -124,10 +124,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const components = Object.entries(yieldData)
                     .map(([matID, qty]) => {
                         const adjustedQty = Math.floor(qty * yieldPercent);
+                        if (adjustedQty < 1) return null;
                         const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                         const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
                         return `${mineralName} x${adjustedQty}`;
-                    });
+                    })
+                    .filter(Boolean);
     
                 return `${name} [${components.join(', ')}]`;
             });
