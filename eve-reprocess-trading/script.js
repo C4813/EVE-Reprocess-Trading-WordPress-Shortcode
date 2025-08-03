@@ -110,15 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
                 return topGroup === selectedTopGroup;
             })
-            .map(([name, item]) => {
-                const marketGroupID = item.marketGroupID ?? 'null';
-                const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : 'None';
-                return `${name} - marketGroupID: ${marketGroupID}, topGroup: ${topGroup}`;
-            });
+            .map(([name]) => name);
 
         marketGroupResults.innerHTML = results.length === 0
             ? `<li><em>No items found for this group</em></li>`
-            : results.map(line => `<li>${line}</li>`).join('');
+            : results.map(name => `<li>${name}</li>`).join('');
 
         marketGroupResultsWrapper.style.display = 'block';
     }
