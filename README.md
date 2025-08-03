@@ -9,8 +9,9 @@ This plugin is designed to replace and enhance my current [EVE Reprocessing Mast
 - [x] Trade hub select
   - [x] price and volume data based on slected trade hub
   - [x] secondary trade hub consideration (e.g. if the buy value is higher in Perimeter, use the Perimeter value)
-- [ ] filter invTypes by market group ID to generate a list of modules/ships
+- [x] filter invTypes by market group ID to generate a list of modules/ships
   - [ ] optional settings to fine-tune results
+        (nearly there. basic functionality added, the rest will come later)
 - [ ] calculate yielded materials from fine-tuned results (e.g. include only meta modules)
   - [ ] add scrapmetal reprocessing skill
 - [ ] value the yilded results
