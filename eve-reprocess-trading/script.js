@@ -1,6 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const corpSelect = document.getElementById('corp_select');
-    const factionDisplay = document.getElementById('faction_display');
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
@@ -58,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateFactionAndCorp() {
         const hub = hubSelect.value;
-        const data = hubToFactionCorp[hub];
-        factionDisplay.textContent = data?.faction || "Caldari State";
-        if (corpSelect) {
-            corpSelect.innerHTML = `<option>${data?.corp || "Caldari Navy"}</option>`;
-        }
+        const data = hubToFactionCorp[hub] || { faction: "[Faction]", corp: "[Corporation]" };
+    
+        const factionLabel = document.getElementById('faction_label');
+        const corpLabel = document.getElementById('corp_label');
+    
+        if (factionLabel) factionLabel.textContent = `Base ${data.faction} Standing`;
+        if (corpLabel) corpLabel.textContent = `Base ${data.corp} Standing`;
     }
 
     function updateRegionVolumeHeader() {
@@ -77,9 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const conn = safeParse(document.getElementById('skill_connections').value);
         const crim = safeParse(document.getElementById('skill_criminal').value);
         const diplo = safeParse(document.getElementById('skill_diplomacy').value);
-        const baseFaction = safeParse(document.getElementById('faction_standing').value);
-        const baseCorp = safeParse(document.getElementById('corp_standing').value);
-        const corp = corpSelect ? corpSelect.value : "";
+        const baseFaction = safeParse(document.getElementById('faction_standing_input').value);
+        const baseCorp = safeParse(document.getElementById('corp_standing_input').value);
 
         const factionEff = applyEffectiveStanding(baseFaction, 'Connections', conn, crim, diplo);
         const corpEff = applyEffectiveStanding(baseCorp, 'Connections', conn, crim, diplo);
@@ -88,8 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const reprocessingTax = calcReprocessingTax(baseCorp, conn).toFixed(2);
         const salesTax = calcSalesTax(accounting).toFixed(2);
 
-        document.getElementById('derived_faction_standing').textContent = factionEff.toFixed(2);
-        document.getElementById('derived_corp_standing').textContent = corpEff.toFixed(2);
+        document.getElementById('faction_standing_result').textContent = factionEff.toFixed(2);
+        document.getElementById('corp_standing_result').textContent = corpEff.toFixed(2);
         document.getElementById('broker_fee').textContent = `${brokerFee}%`;
         document.getElementById('reprocess_tax').textContent = `${reprocessingTax}%`;
         document.getElementById('sales_tax').textContent = `${salesTax}%`;
@@ -118,10 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(r => r.text())
         .then(raw => {
             console.log("RAW PRICE API RESPONSE:", raw);
-        
+
             try {
                 const data = JSON.parse(raw);
-        
+
                 mineralTable.innerHTML = '';
                 const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
                 minerals.forEach(mineral => {
@@ -137,8 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tableWrapper.style.display = 'block';
             } catch (err) {
                 console.error("Failed to parse JSON response from price_api.php:");
-                console.error(raw);  // Log the invalid content
-                console.error(err);  // Log the actual parsing error
+                console.error(raw);
+                console.error(err);
             }
         })
         .catch(err => {
@@ -160,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('input', updateResults);
     });
 
-    // Initialize
+    // Initialize on page load
     updateFactionAndCorp();
     updateRegionVolumeHeader();
     updateResults();
