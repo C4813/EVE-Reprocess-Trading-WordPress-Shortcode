@@ -79,23 +79,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const diplo = safeParse(document.getElementById('skill_diplomacy').value);
         const baseFaction = safeParse(document.getElementById('faction_standing_input').value);
         const baseCorp = safeParse(document.getElementById('corp_standing_input').value);
-
+    
+        // Check for invalid standing range
+        const invalid = (baseFaction < -10 || baseFaction > 10 || baseCorp < -10 || baseCorp > 10);
+    
+        if (invalid) {
+            document.getElementById('faction_standing_result').textContent = "Invalid Standings Input";
+            document.getElementById('corp_standing_result').textContent = "Invalid Standings Input";
+            document.getElementById('broker_fee').textContent = "Invalid Standings Input";
+            document.getElementById('reprocess_tax').textContent = "Invalid Standings Input";
+            document.getElementById('sales_tax').textContent = "Invalid Standings Input";
+            document.getElementById('result_skills').innerHTML = `
+                <div><strong>Skill Used (Faction)</strong><br><i>Invalid Standings Input</i></div>
+                <div><strong>Skill Used (Corp)</strong><br><i>Invalid Standings Input</i></div>
+            `;
+            return;
+        }
+    
         const factionEff = applyEffectiveStanding(baseFaction, 'Connections', conn, crim, diplo);
         const corpEff = applyEffectiveStanding(baseCorp, 'Connections', conn, crim, diplo);
-
+    
         const brokerFee = calcBrokerFee(broker, baseFaction, baseCorp).toFixed(2);
         const reprocessingTax = calcReprocessingTax(baseCorp, conn).toFixed(2);
         const salesTax = calcSalesTax(accounting).toFixed(2);
-
+    
         document.getElementById('faction_standing_result').textContent = factionEff.toFixed(2);
         document.getElementById('corp_standing_result').textContent = corpEff.toFixed(2);
         document.getElementById('broker_fee').textContent = `${brokerFee}%`;
         document.getElementById('reprocess_tax').textContent = `${reprocessingTax}%`;
         document.getElementById('sales_tax').textContent = `${salesTax}%`;
-
+    
         const skillUsedFaction = (baseFaction < 0) ? 'Diplomacy' : 'Connections';
         const skillUsedCorp = (baseCorp < 0) ? 'Diplomacy' : 'Connections';
-
+    
         document.getElementById('result_skills').innerHTML = `
             <div><strong>Skill Used (Faction)</strong><br><i>${skillUsedFaction}</i></div>
             <div><strong>Skill Used (Corp)</strong><br><i>${skillUsedCorp}</i></div>
