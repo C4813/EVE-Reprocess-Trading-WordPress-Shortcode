@@ -114,7 +114,7 @@
     <!-- Buttons -->
     <button id="generate_btn">
         <span class="btn-text">Generate List</span>
-    </button>
+    </button><br >
     
     <button id="generate_prices_btn" style="display:none;">
         <span class="btn-text">Generate Prices</span>
