@@ -102,10 +102,22 @@
             </div>
         </div>
     </div>
-    <button id="generate_btn" class="eve-input" style="margin-top: 20px;">
-        <span class="spinner" style="display:none;"></span>
-        <span class="btn-text">Generate</span>
+
+    <button id="generate_btn" class="eve-input action-button" style="margin-top: 20px;">
+        <span class="spinner"></span>
+        <span class="btn-text">Generate List</span>
     </button>
+
+    <button id="generate_prices_btn" class="eve-input action-button" style="margin-top: 10px;">
+        <span class="spinner"></span>
+        <span class="btn-text">Generate Prices</span>
+    </button>
+
+    <button id="copy_toolbar_btn" class="eve-input action-button" style="margin-top: 10px;">
+        <span class="spinner"></span>
+        <span class="btn-text">Copy Market Toolbar</span>
+    </button>
+
     <div id="price_table_wrapper" style="display:none;">
         <table id="output_price_table" class="eve-reprocess-table">
             <thead>
