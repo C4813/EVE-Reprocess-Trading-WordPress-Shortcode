@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
+    const generatePricesBtn = document.getElementById('generate_prices_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
     const tableWrapper = document.getElementById('price_table_wrapper');
     const outputTable = document.getElementById('output_price_table');
@@ -106,11 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMarketGroupResults() {
         const selectedTopGroup = marketGroupSelect.value;
-    
         const yieldText = yieldOutput.textContent || "0%";
         const yieldMatch = yieldText.match(/([\d.]+)%/);
         const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
-    
+
         const results = Object.entries(invTypes)
             .filter(([name, item]) => {
                 const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const typeID = item.typeID;
                 const yieldData = reprocessYields[typeID];
                 if (!yieldData) return name;
-    
+
                 const components = Object.entries(yieldData)
                     .map(([matID, qty]) => {
                         const adjustedQty = Math.floor(qty * yieldPercent);
@@ -130,24 +130,37 @@ document.addEventListener('DOMContentLoaded', () => {
                         return `${mineralName} x${adjustedQty}`;
                     })
                     .filter(Boolean);
-    
+
                 return `${name} [${components.join(', ')}]`;
             });
-    
+
         marketGroupResults.innerHTML = results.length === 0
             ? `<li><em>No items found for this group</em></li>`
             : results.map(name => `<li>${name}</li>`).join('');
-    
+
         marketGroupResultsWrapper.style.display = 'block';
     }
 
     generateBtn.addEventListener('click', () => {
         generateBtn.disabled = true;
-        generateBtn.innerHTML = `<span class="spinner"></span> Generating...`;
+        generateBtn.classList.add('loading');
+    
+        marketGroupResultsWrapper.style.display = 'none';
+    
+        setTimeout(() => {
+            updateMarketGroupResults();
+            generateBtn.classList.remove('loading');
+            generateBtn.disabled = false;
+        }, 100); // Optional small delay to ensure the spinner has time to render
+    });
+
+    generatePricesBtn.addEventListener('click', () => {
+        generatePricesBtn.disabled = true;
+        generatePricesBtn.classList.add('loading');
 
         const isPrivate = hubSelect.value === 'private';
         outputTableBody.innerHTML = '';
-        marketGroupResultsWrapper.style.display = 'none';
+        regionHeader.style.display = isPrivate ? 'none' : '';
 
         if (isPrivate) {
             const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
@@ -164,8 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${sell.toFixed(2)}</td>
                     </tr>`;
             });
-            regionHeader.style.display = 'none';
-            finishGenerate();
+            finishPriceGen();
         } else {
             fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
                 method: 'POST',
@@ -191,20 +203,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${Math.round(volume).toLocaleString()}</td>
                         </tr>`;
                 });
-                regionHeader.style.display = '';
-                finishGenerate();
+                finishPriceGen();
             })
             .catch(err => {
                 console.error("Fetch error:", err);
-                finishGenerate();
+                finishPriceGen();
             });
         }
 
-        function finishGenerate() {
+        function finishPriceGen() {
             tableWrapper.style.display = 'block';
-            generateBtn.disabled = false;
-            generateBtn.innerHTML = `<span class="btn-text">Generate</span>`;
-            updateMarketGroupResults();
+            generatePricesBtn.disabled = false;
+            generatePricesBtn.classList.remove('loading');
         }
     });
 
