@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
+    const copyToolbarBtn = document.getElementById('copy_toolbar_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
     const tableWrapper = document.getElementById('price_table_wrapper');
     const outputTable = document.getElementById('output_price_table');
@@ -139,29 +140,34 @@ document.addEventListener('DOMContentLoaded', () => {
             : results.map(name => `<li>${name}</li>`).join('');
 
         marketGroupResultsWrapper.style.display = 'block';
+        generatePricesBtn.style.display = 'inline-flex';
     }
 
     generateBtn.addEventListener('click', () => {
         generateBtn.disabled = true;
         generateBtn.classList.add('loading');
-    
+        generateBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Generate List</span>`;
+
+        outputTableBody.innerHTML = '';
+        tableWrapper.style.display = 'none';
         marketGroupResultsWrapper.style.display = 'none';
-    
+        generatePricesBtn.style.display = 'none';
+
         setTimeout(() => {
             updateMarketGroupResults();
-            generateBtn.classList.remove('loading');
             generateBtn.disabled = false;
-        }, 100); // Optional small delay to ensure the spinner has time to render
+            generateBtn.classList.remove('loading');
+            generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
+        }, 400);
     });
 
     generatePricesBtn.addEventListener('click', () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
+        generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Generate Prices</span>`;
 
         const isPrivate = hubSelect.value === 'private';
         outputTableBody.innerHTML = '';
-        regionHeader.style.display = isPrivate ? 'none' : '';
-
         if (isPrivate) {
             const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
             minerals.forEach(mineral => {
@@ -177,7 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${sell.toFixed(2)}</td>
                     </tr>`;
             });
-            finishPriceGen();
+            regionHeader.style.display = 'none';
+            finishGenerate();
         } else {
             fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
                 method: 'POST',
@@ -187,34 +194,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     includeSecondary: includeSecondarySelect.value === 'yes'
                 })
             })
-            .then(r => r.json())
-            .then(data => {
-                const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
-                minerals.forEach(mineral => {
-                    const buy = data.buy[mineral] || 0;
-                    const sell = data.sell[mineral] || 0;
-                    const volume = data.volumes[mineral] || 0;
+                .then(r => r.json())
+                .then(data => {
+                    const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
+                    minerals.forEach(mineral => {
+                        const buy = data.buy[mineral] || 0;
+                        const sell = data.sell[mineral] || 0;
+                        const volume = data.volumes[mineral] || 0;
 
-                    outputTableBody.innerHTML += `
-                        <tr>
-                            <td>${mineral}</td>
-                            <td>${buy.toFixed(2)}</td>
-                            <td>${sell.toFixed(2)}</td>
-                            <td>${Math.round(volume).toLocaleString()}</td>
-                        </tr>`;
+                        outputTableBody.innerHTML += `
+                            <tr>
+                                <td>${mineral}</td>
+                                <td>${buy.toFixed(2)}</td>
+                                <td>${sell.toFixed(2)}</td>
+                                <td>${Math.round(volume).toLocaleString()}</td>
+                            </tr>`;
+                    });
+                    regionHeader.style.display = '';
+                    finishGenerate();
+                })
+                .catch(err => {
+                    console.error("Fetch error:", err);
+                    finishGenerate();
                 });
-                finishPriceGen();
-            })
-            .catch(err => {
-                console.error("Fetch error:", err);
-                finishPriceGen();
-            });
         }
 
-        function finishPriceGen() {
+        function finishGenerate() {
             tableWrapper.style.display = 'block';
             generatePricesBtn.disabled = false;
             generatePricesBtn.classList.remove('loading');
+            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
         }
     });
 
