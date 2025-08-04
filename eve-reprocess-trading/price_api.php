@@ -1,5 +1,4 @@
 <?php
-// price_api.php
 ob_start();
 header('Content-Type: application/json');
 
@@ -10,6 +9,7 @@ function log_debug($msg) {
 $input = json_decode(file_get_contents('php://input'), true);
 $hub = $input['hub'] ?? 'jita';
 $scope = ($input['includeSecondary'] ?? 'no') === 'yes' ? 'secondary' : 'primary';
+$requestedMaterials = $input['materials'] ?? [];
 
 $hub_map = [
     'jita' => ['region' => 10000002, 'primary' => 30000142, 'secondary' => 30000144],
@@ -29,14 +29,13 @@ $region_id = $hub_map[$hub]['region'];
 $primary_system = $hub_map[$hub]['primary'];
 $secondary_system = $hub_map[$hub]['secondary'];
 
-$minerals = ["Isogen", "Megacyte", "Mexallon", "Morphite", "Nocxium", "Pyerite", "Tritanium", "Zydrine"];
 $invTypes = json_decode(file_get_contents(__DIR__ . '/invTypes.json'), true);
-
-$cache_file = __DIR__ . "/esi_cache_{$hub}_{$scope}.json";
 $map_file = __DIR__ . "/location_system_map.json";
 $system_map = file_exists($map_file) ? json_decode(file_get_contents($map_file), true) : [];
 
-$buy = $sell = $volumes = array_fill_keys($minerals, 0);
+$cache_key = md5(json_encode($requestedMaterials));
+$cache_file = __DIR__ . "/esi_cache_{$hub}_{$scope}_{$cache_key}.json";
+$buy = $sell = $volumes = array_fill_keys($requestedMaterials, 0);
 
 function resolve_system_id($locationID, &$map) {
     if (isset($map[$locationID])) return $map[$locationID];
@@ -49,13 +48,8 @@ function resolve_system_id($locationID, &$map) {
     $res = @file_get_contents($url);
     $info = json_decode($res, true);
     $systemID = $info['system_id'] ?? null;
-    if ($systemID) {
-        $map[$locationID] = $systemID;
-        return $systemID;
-    }
-    log_debug("Could not resolve station system ID for location $locationID");
-    $map[$locationID] = null;
-    return null;
+    $map[$locationID] = $systemID;
+    return $systemID;
 }
 
 function fetch_orders_for_type($region_id, $typeID) {
@@ -75,7 +69,7 @@ function fetch_orders_for_type($region_id, $typeID) {
 }
 
 if (!file_exists($cache_file) || (time() - filemtime($cache_file)) > 3600) {
-    foreach ($minerals as $name) {
+    foreach ($requestedMaterials as $name) {
         $typeID = $invTypes[$name]['typeID'] ?? null;
         if (!$typeID) continue;
 
@@ -125,11 +119,13 @@ if (!file_exists($cache_file) || (time() - filemtime($cache_file)) > 3600) {
 
     file_put_contents($map_file, json_encode($system_map));
     file_put_contents($cache_file, json_encode(['buy' => $buy, 'sell' => $sell, 'volumes' => $volumes]));
+    log_debug("Wrote cache file: $cache_file");
 } else {
     $cache = json_decode(file_get_contents($cache_file), true);
     $buy = $cache['buy'] ?? $buy;
     $sell = $cache['sell'] ?? $sell;
     $volumes = $cache['volumes'] ?? $volumes;
+    log_debug("Loaded from cache: $cache_file");
 }
 
 ob_end_clean();
