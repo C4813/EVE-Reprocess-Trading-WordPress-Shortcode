@@ -1,5 +1,6 @@
 <?php /* template.php */ ?>
 <div class="eve-reprocess-wrapper">
+    <!-- Hub Selection -->
     <label>Trade Hub
         <select id="hub_select" class="eve-input">
             <option value="jita" selected>Jita</option>
@@ -11,6 +12,7 @@
         </select>
     </label>
 
+    <!-- Custom Prices for Private Hub -->
     <div id="custom_prices_wrapper" style="display:none; margin-top: 20px;">
         <table class="eve-reprocess-table">
             <thead>
@@ -34,6 +36,7 @@
         </table>
     </div>
 
+    <!-- Secondary Hub Toggle -->
     <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs?
         <select id="include_secondary" class="eve-input">
             <option value="no" selected>No</option>
@@ -41,6 +44,7 @@
         </select>
     </label>
 
+    <!-- Market Group Filter -->
     <div id="market_group_filter" style="margin-top: 30px;">
         <label>Filter Market Group:
             <select id="market_group_select" class="eve-input">
@@ -50,6 +54,7 @@
         </label>
     </div>
 
+    <!-- Skills & Standings -->
     <div class="eve-skills-columns" style="padding-top: 25px;">
         <div class="eve-col eve-border-right">
             <?php
@@ -84,6 +89,7 @@
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
             </div>
 
+            <!-- Private Brokerage Settings -->
             <div id="custom_brokerage_wrapper" style="display:none;">
                 <label>Private Hub Brokerage Fee (%):</label>
                 <input id="custom_brokerage_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
@@ -92,8 +98,10 @@
                 <input id="custom_tax_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
             </div>
 
+            <!-- Effective Skills -->
             <div id="result_skills" class="eve-result-box" style="margin-top: 10px;"></div>
 
+            <!-- Calculated Result Box -->
             <div class="eve-result-box" id="result_main" style="margin-top: 10px;">
                 <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
                 <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
@@ -103,15 +111,16 @@
         </div>
     </div>
 
-    <button id="generate_btn" class="eve-input" style="margin-top: 20px;">
-        <span class="spinner" style="display:none;"></span>
+    <!-- Buttons -->
+    <button id="generate_btn">
         <span class="btn-text">Generate List</span>
     </button>
-    <button id="generate_prices_btn" class="eve-input" style="margin-top: 10px; display: none;">
-        <span class="spinner" style="display:none;"></span>
+    
+    <button id="generate_prices_btn" style="display:none;">
         <span class="btn-text">Generate Prices</span>
     </button>
 
+    <!-- Price Table -->
     <div id="price_table_wrapper" style="display:none;">
         <table id="output_price_table" class="eve-reprocess-table">
             <thead>
@@ -126,6 +135,7 @@
         </table>
     </div>
 
+    <!-- Material & Item Breakdown -->
     <div id="market_group_results_wrapper" style="display:none; margin-top: 20px;">
         <h3>Items in Selected Market Group</h3>
         <ul id="material_list_flat"></ul>
