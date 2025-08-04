@@ -13,8 +13,8 @@ This plugin is designed to replace and enhance my current [EVE Reprocessing Mast
   - [ ] optional settings to fine-tune results
         (nearly there. basic functionality added, the rest will come later)
 - [ ] calculate yielded materials from fine-tuned results (e.g. include only meta modules)
-  - [ ] add scrapmetal reprocessing skill
-- [ ] value the yilded results
+  - [x] add scrapmetal reprocessing skill
+- [x] value the yilded results
   - [ ] compare to mineral buy/sell values
     - [ ] consider brokerage and reprocessing fees and sales tax
   - [ ] generate pastable market quickbar
