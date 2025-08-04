@@ -185,3 +185,7 @@ button .btn-text {
     text-align: center;
     margin-top: 20px;
 }
+
+#material_list_flat {
+    display: none;
+}
