@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const customBrokerageInput = document.getElementById('custom_brokerage_input');
     const customTaxInput = document.getElementById('custom_tax_input');
 
-    let invTypes = {}, marketGroups = {}, reprocessYields = {};
+    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {};
 
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
@@ -74,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
 
                 const materialSet = new Set();
+                const itemBreakdown = [];
+
                 const results = Object.entries(invTypes)
                     .filter(([name, item]) => {
                         const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
@@ -91,16 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                                 const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
                                 materialSet.add(mineralName);
-                                return `${mineralName} x${adjustedQty}`;
+                                return { mineralName, qty: adjustedQty };
                             })
                             .filter(Boolean);
 
-                        return `${name} [${components.join(', ')}]`;
+                        itemBreakdown.push({ name, components });
+                        return name;
                     });
 
-                marketGroupResults.innerHTML = results.length === 0
+                marketGroupResults.innerHTML = itemBreakdown.length === 0
                     ? `<li><em>No items found for this group</em></li>`
-                    : results.map(name => `<li>${name}</li>`).join('');
+                    : itemBreakdown.map(item => {
+                        return `<li data-name="${item.name}" data-components='${JSON.stringify(item.components)}'>${item.name}</li>`;
+                    }).join('');
 
                 const materialList = Array.from(materialSet).sort();
                 materialListFlat.innerHTML = materialList.length === 0
@@ -116,17 +121,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    generateBtn.addEventListener('click', () => {
-        updateMarketGroupResults();
-    });
-
     generatePricesBtn.addEventListener('click', () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
         const materials = Array.from(materialListFlat.querySelectorAll('li'))
-            .map(li => li.textContent.split(' (')[0].trim())
+            .map(li => li.textContent.trim())
             .filter(name => name.length > 0 && !name.startsWith('No materials'));
 
         const batchSize = 20;
@@ -135,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
             batches.push(materials.slice(i, i + batchSize));
         }
 
-        const allBuy = {}, allSell = {}, allVolumes = {};
+        const allBuy = {};
 
         const fetchBatch = async (batch) => {
             const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
@@ -151,19 +152,17 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         Promise.all(batches.map(fetchBatch)).then(results => {
-            results.forEach(data => {
-                Object.assign(allBuy, data.buy);
-                Object.assign(allSell, data.sell);
-                Object.assign(allVolumes, data.volumes);
-            });
+            results.forEach(data => Object.assign(allBuy, data.buy));
+            currentMaterialPrices = allBuy;
 
-            const items = materialListFlat.querySelectorAll('li');
-            items.forEach(li => {
-                const name = li.textContent.split(' (')[0].trim();
-                const buy = allBuy[name] || 0;
-                const sell = allSell[name] || 0;
-                const volume = allVolumes[name] || 0;
-                li.textContent = `${name} (Buy: ${buy.toFixed(2)} | Sell: ${sell.toFixed(2)} | Volume: ${Math.round(volume).toLocaleString()})`;
+            marketGroupResults.querySelectorAll('li').forEach(li => {
+                const components = JSON.parse(li.dataset.components || '[]');
+                let total = 0;
+                components.forEach(({ mineralName, qty }) => {
+                    const price = currentMaterialPrices[mineralName] || 0;
+                    total += qty * price;
+                });
+                li.textContent = `${li.dataset.name} [${total.toFixed(2)}]`;
             });
 
             generatePricesBtn.disabled = false;
@@ -176,15 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
             generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
         });
     });
-
-    hubSelect.addEventListener('change', () => {
-        const data = hubToFactionCorp[hubSelect.value] || { faction: "[Faction]", corp: "[Corporation]" };
-        factionLabel.textContent = `Base ${data.faction} Standing`;
-        corpLabel.textContent = `Base ${data.corp} Standing`;
-        updateResults();
-    });
-
-    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
 
     function updateResults() {
         const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
@@ -217,4 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
             <div><strong>Skill Used (Corp)</strong><br><i>${baseCorp < 0 ? 'Diplomacy' : 'Connections'}</i></div>
         `;
     }
+
+    hubSelect.addEventListener('change', () => {
+        updateResults();
+        const data = hubToFactionCorp[hubSelect.value] || { faction: "[Faction]", corp: "[Corporation]" };
+        factionLabel.textContent = `Base ${data.faction} Standing`;
+        corpLabel.textContent = `Base ${data.corp} Standing`;
+    });
+
+    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
+    generateBtn.addEventListener('click', updateMarketGroupResults);
+    updateResults();
 });
