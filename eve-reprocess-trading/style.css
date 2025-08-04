@@ -135,15 +135,22 @@ label {
     margin: 4px 0;
 }
 
-#secondary_toggle_wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-top: 20px;
+#generate_prices_btn {
+    display: none;
+    margin-top: 15px;
 }
 
-/* Spinner and button loading enhancements */
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 3px solid #fff;
+    border-top: 3px solid #888;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -162,7 +169,9 @@ button.action-button {
     transition: background-color 0.3s;
 }
 
+/* Spinner style reused */
 button.action-button .spinner {
+    display: inline-block;
     width: 16px;
     height: 16px;
     border: 3px solid #fff;
@@ -171,13 +180,22 @@ button.action-button .spinner {
     animation: spin 0.8s linear infinite;
     margin-right: 6px;
     vertical-align: middle;
+}
+
+/* Hide spinner by default */
+button.action-button:not(.loading) .spinner {
     display: none;
 }
 
-button.action-button.loading .spinner {
-    display: inline-block;
-}
-
+/* Dim text while loading */
 button.action-button.loading .btn-text {
     opacity: 0.6;
+}
+
+#secondary_toggle_wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: 20px;
 }
