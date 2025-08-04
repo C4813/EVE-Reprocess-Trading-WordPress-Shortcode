@@ -1,191 +1,221 @@
-.eve-reprocess-wrapper {
-    max-width: 900px;
-    margin: 0 auto;
-    font-family: inherit;
-    text-align: center;
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const hubSelect = document.getElementById('hub_select');
+    const generateBtn = document.getElementById('generate_btn');
+    const generatePricesBtn = document.getElementById('generate_prices_btn');
+    const includeSecondarySelect = document.getElementById('include_secondary');
+    const tableWrapper = document.getElementById('price_table_wrapper');
+    const outputTable = document.getElementById('output_price_table');
+    const outputTableBody = outputTable.querySelector('tbody');
+    const regionHeader = document.getElementById('region_volume_header');
+    const materialListFlat = document.getElementById('material_list_flat');
+    const marketGroupResults = document.getElementById('market_group_results');
+    const marketGroupResultsWrapper = document.getElementById('market_group_results_wrapper');
+    const customPriceWrapper = document.getElementById('custom_prices_wrapper');
+    const standingInputsWrapper = document.getElementById('standing_inputs_wrapper');
+    const customBrokerageWrapper = document.getElementById('custom_brokerage_wrapper');
+    const resultSkillsBox = document.getElementById('result_skills');
+    const factionLabel = document.getElementById('faction_label');
+    const corpLabel = document.getElementById('corp_label');
+    const factionInput = document.getElementById('faction_standing_input');
+    const corpInput = document.getElementById('corp_standing_input');
+    const factionResult = document.getElementById('faction_standing_result');
+    const corpResult = document.getElementById('corp_standing_result');
+    const brokerFeeOutput = document.getElementById('broker_fee');
+    const taxOutput = document.getElementById('reprocess_tax');
+    const salesTaxOutput = document.getElementById('sales_tax');
+    const yieldOutput = document.getElementById('reprocess_yield');
+    const customBrokerageInput = document.getElementById('custom_brokerage_input');
+    const customTaxInput = document.getElementById('custom_tax_input');
 
-.eve-skills-columns,
-.eve-result-row {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 25px;
-    text-align: center;
-}
+    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {};
 
-.eve-col {
-    flex: 1 1 0;
-    max-width: 50%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
+    const hubToFactionCorp = {
+        jita: { faction: "Caldari State", corp: "Caldari Navy" },
+        amarr: { faction: "Amarr Empire", corp: "Emperor Family" },
+        rens: { faction: "Minmatar Republic", corp: "Brutor Tribe" },
+        hek: { faction: "Minmatar Republic", corp: "Boundless Creations" },
+        dodixie: { faction: "Gallente Federation", corp: "Federation Navy" },
+    };
 
-.eve-border-right,
-.eve-result-row .eve-col:first-child {
-    border-right: 2px solid #ccc;
-    padding-right: 20px;
-    margin-right: 0;
-}
+    function loadJSON(url) {
+        return fetch(url).then(r => r.json());
+    }
 
-label {
-    font-weight: bold;
-    margin: 10px 0 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-}
+    Promise.all([
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json')
+    ]).then(([types, groups, yields]) => {
+        invTypes = types;
+        marketGroups = groups;
+        reprocessYields = yields;
+        updateResults();
+    });
 
-.eve-input {
-    width: 200px;
-    height: 45px;
-    font-size: 14px;
-    text-align: center;
-}
+    function getTopLevelGroup(marketGroupID) {
+        let current = marketGroups[marketGroupID];
+        while (current && current.parentGroupID !== "None") {
+            marketGroupID = current.parentGroupID;
+            current = marketGroups[marketGroupID];
+        }
+        return marketGroupID;
+    }
 
-.output {
-    width: 200px;
-    min-height: 45px;
-    background-color: #f2f2f2;
-    padding: 6px 12px;
-    border-radius: 8px;
-    margin: 6px auto;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    function updateMarketGroupResults() {
+        generateBtn.disabled = true;
+        generateBtn.classList.add('loading');
+        generateBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">List Generating<br><small>This may take several seconds<br>Do not refresh the page</small></span>`;
 
-#result_skills,
-#result_main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                const selectedTopGroup = document.getElementById('market_group_select').value;
+                const yieldText = yieldOutput.textContent || "0%";
+                const yieldMatch = yieldText.match(/([\d.]+)%/);
+                const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
 
-.eve-result-box {
-    background-color: #f2f2f2;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    display: inline-block;
-    text-align: center;
-    max-width: 280px;
-}
+                const materialSet = new Set();
+                const itemBreakdown = [];
 
-#result_main div {
-    margin: 3px 0;
-}
+                const results = Object.entries(invTypes)
+                    .filter(([name, item]) => {
+                        const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
+                        return topGroup === selectedTopGroup;
+                    })
+                    .map(([name, item]) => {
+                        const typeID = item.typeID;
+                        const yieldData = reprocessYields[typeID];
+                        if (!yieldData) return name;
 
-#result_main strong {
-    font-weight: bold;
-}
+                        const components = Object.entries(yieldData)
+                            .map(([matID, qty]) => {
+                                const adjustedQty = Math.floor(qty * yieldPercent);
+                                if (adjustedQty < 1) return null;
+                                const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
+                                const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
+                                materialSet.add(mineralName);
+                                return { mineralName, qty: adjustedQty };
+                            })
+                            .filter(Boolean);
 
-#result_main span {
-    font-weight: normal;
-}
+                        itemBreakdown.push({ name, components });
+                        return name;
+                    });
 
-.eve-reprocess-table {
-    margin: 30px auto 0;
-    border-collapse: collapse;
-    width: 100%;
-}
+                marketGroupResults.innerHTML = itemBreakdown.length === 0
+                    ? `<li><em>No items found for this group</em></li>`
+                    : itemBreakdown.map(item => {
+                        return `<li data-name="${item.name}" data-components='${JSON.stringify(item.components)}'>${item.name}</li>`;
+                    }).join('');
 
-.eve-reprocess-table th,
-.eve-reprocess-table td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
-    vertical-align: middle;
-}
+                const materialList = Array.from(materialSet).sort();
+                materialListFlat.innerHTML = materialList.length === 0
+                    ? `<li><em>No materials found</em></li>`
+                    : materialList.map(name => `<li>${name}</li>`).join('');
 
-.eve-reprocess-table th {
-    font-weight: bold;
-}
+                marketGroupResultsWrapper.style.display = 'block';
+                generatePricesBtn.style.display = 'inline-block';
+                generateBtn.disabled = false;
+                generateBtn.classList.remove('loading');
+                generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
+            }, 10);
+        });
+    }
 
-button {
-    font-size: 16px;
-    font-weight: bold;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    background-color: #444;
-    color: #fff;
-    cursor: pointer;
-    margin-top: 30px;
-    transition: background-color 0.3s ease;
-}
+    generatePricesBtn.addEventListener('click', () => {
+        generatePricesBtn.disabled = true;
+        generatePricesBtn.classList.add('loading');
+        generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
-button:hover {
-    background-color: #333;
-}
+        const materials = Array.from(materialListFlat.querySelectorAll('li'))
+            .map(li => li.textContent.trim())
+            .filter(name => name.length > 0 && !name.startsWith('No materials'));
 
-button.loading {
-    cursor: wait;
-    opacity: 0.7;
-}
+        const batchSize = 20;
+        const batches = [];
+        for (let i = 0; i < materials.length; i += batchSize) {
+            batches.push(materials.slice(i, i + batchSize));
+        }
 
-.spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 3px solid #fff;
-    border-top: 3px solid #888;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    vertical-align: middle;
-    margin-right: 6px;
-}
+        const allBuy = {};
 
-button.loading .spinner {
-    display: inline-block;
-}
+        const fetchBatch = async (batch) => {
+            const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    hub: hubSelect.value,
+                    includeSecondary: includeSecondarySelect.value === 'yes',
+                    materials: batch
+                })
+            });
+            return await res.json();
+        };
 
-button.loading .btn-text {
-    opacity: 0.8;
-}
+        Promise.all(batches.map(fetchBatch)).then(results => {
+            results.forEach(data => Object.assign(allBuy, data.buy));
+            currentMaterialPrices = allBuy;
 
-button .btn-text {
-    display: inline-block;
-    text-align: center;
-}
+            marketGroupResults.querySelectorAll('li').forEach(li => {
+                const components = JSON.parse(li.dataset.components || '[]');
+                let total = 0;
+                components.forEach(({ mineralName, qty }) => {
+                    const price = currentMaterialPrices[mineralName] || 0;
+                    total += qty * price;
+                });
+                li.textContent = `${li.dataset.name} [${total.toFixed(2)}]`;
+            });
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
+            generatePricesBtn.disabled = false;
+            generatePricesBtn.classList.remove('loading');
+            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+        }).catch(err => {
+            console.error("Fetch error:", err);
+            generatePricesBtn.disabled = false;
+            generatePricesBtn.classList.remove('loading');
+            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+        });
+    });
 
-#market_group_results_wrapper {
-    display: none;
-    margin-top: 20px;
-    max-width: 900px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: left;
-}
+    function updateResults() {
+        const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
+        const broker = parseFloat(document.getElementById('skill_broker')?.value || 0);
+        const conn = parseFloat(document.getElementById('skill_connections')?.value || 0);
+        const diplo = parseFloat(document.getElementById('skill_diplomacy')?.value || 0);
+        const scrap = parseFloat(document.getElementById('skill_scrapmetal')?.value || 0);
+        const baseFaction = parseFloat(factionInput?.value || 0);
+        const baseCorp = parseFloat(corpInput?.value || 0);
 
-#market_group_results {
-    list-style-type: disc;
-    margin: 10px auto;
-    padding-left: 20px;
-    max-width: 900px;
-    font-size: 14px;
-}
+        const factionEff = baseFaction < 0 ? baseFaction + ((10 - baseFaction) * 0.04 * diplo) : baseFaction + ((10 - baseFaction) * 0.04 * conn);
+        const corpEff = baseCorp < 0 ? baseCorp + ((10 - baseCorp) * 0.04 * diplo) : baseCorp + ((10 - baseCorp) * 0.04 * conn);
 
-#market_group_results li {
-    margin: 4px 0;
-}
+        const brokerFee = Math.max(0, 3 - (0.3 * broker) - (0.03 * baseFaction) - (0.02 * baseCorp));
+        const reprocessTax = corpEff <= 0 ? 5.0 : corpEff < 6.67 ? +(0.05 * (1 - corpEff / 6.67)).toFixed(4) * 100 : 0;
+        const salesTax = 7.5 * (1 - (0.11 * accounting));
+        const yieldPercent = 50 * (1 + 0.02 * scrap);
 
-#secondary_toggle_wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-top: 20px;
-}
+        factionResult.textContent = `Effective: ${factionEff.toFixed(2)}`;
+        corpResult.textContent = `Effective: ${corpEff.toFixed(2)}`;
 
-#material_list_flat {
-    display: none;
-}
+        brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
+        taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
+        salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
+        yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
+
+        resultSkillsBox.style.display = 'block';
+        resultSkillsBox.innerHTML = `
+            <div><strong>Skill Used (Faction)</strong><br><i>${baseFaction < 0 ? 'Diplomacy' : 'Connections'}</i></div>
+            <div><strong>Skill Used (Corp)</strong><br><i>${baseCorp < 0 ? 'Diplomacy' : 'Connections'}</i></div>
+        `;
+    }
+
+    hubSelect.addEventListener('change', () => {
+        updateResults();
+        const data = hubToFactionCorp[hubSelect.value] || { faction: "[Faction]", corp: "[Corporation]" };
+        factionLabel.textContent = `Base ${data.faction} Standing`;
+        corpLabel.textContent = `Base ${data.corp} Standing`;
+    });
+
+    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
+    generateBtn.addEventListener('click', updateMarketGroupResults);
+    updateResults();
+});
