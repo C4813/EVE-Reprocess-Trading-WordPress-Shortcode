@@ -111,7 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const yieldText = yieldOutput.textContent || "0%";
         const yieldMatch = yieldText.match(/([\d.]+)%/);
         const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
-
+    
+        const materialSet = new Set();
         const results = Object.entries(invTypes)
             .filter(([name, item]) => {
                 const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
@@ -121,24 +122,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 const typeID = item.typeID;
                 const yieldData = reprocessYields[typeID];
                 if (!yieldData) return name;
-
+    
                 const components = Object.entries(yieldData)
                     .map(([matID, qty]) => {
                         const adjustedQty = Math.floor(qty * yieldPercent);
                         if (adjustedQty < 1) return null;
                         const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                         const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
+                        materialSet.add(mineralName);
                         return `${mineralName} x${adjustedQty}`;
                     })
                     .filter(Boolean);
-
+    
                 return `${name} [${components.join(', ')}]`;
             });
-
+    
+        // Populate materials list (unique flat list)
+        const materialList = Array.from(materialSet).sort();
+        const materialListEl = document.getElementById('material_list_flat');
+        materialListEl.innerHTML = materialList.length === 0
+            ? `<li><em>No materials found</em></li>`
+            : materialList.map(name => `<li>${name}</li>`).join('');
+    
+        // Populate item breakdown list
         marketGroupResults.innerHTML = results.length === 0
             ? `<li><em>No items found for this group</em></li>`
             : results.map(name => `<li>${name}</li>`).join('');
-
+    
         marketGroupResultsWrapper.style.display = 'block';
         generatePricesBtn.style.display = 'inline-block';
     }
