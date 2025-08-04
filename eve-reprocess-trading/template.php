@@ -103,7 +103,6 @@
         </div>
     </div>
 
-    <!-- Buttons -->
     <button id="generate_btn" class="eve-input" style="margin-top: 20px;">
         <span class="spinner" style="display:none;"></span>
         <span class="btn-text">Generate List</span>
@@ -129,6 +128,7 @@
 
     <div id="market_group_results_wrapper" style="display:none; margin-top: 20px;">
         <h3>Items in Selected Market Group</h3>
+        <ul id="material_list_flat"></ul>
         <ul id="market_group_results"></ul>
     </div>
 </div>
