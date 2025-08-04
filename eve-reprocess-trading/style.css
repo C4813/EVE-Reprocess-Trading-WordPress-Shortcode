@@ -1,3 +1,4 @@
+
 .eve-reprocess-wrapper {
     max-width: 900px;
     margin: 0 auto;
@@ -134,34 +135,49 @@ label {
     margin: 4px 0;
 }
 
-.spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 3px solid #fff;
-    border-top: 3px solid #888;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    vertical-align: middle;
-    margin-right: 6px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-button.loading .spinner {
-    display: inline-block;
-}
-
-button.loading .btn-text {
-    opacity: 0.6;
-}
-
 #secondary_toggle_wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     margin-top: 20px;
+}
+
+/* Spinner and button loading enhancements */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+button.action-button {
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 240px;
+    height: 45px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+button.action-button .spinner {
+    width: 16px;
+    height: 16px;
+    border: 3px solid #fff;
+    border-top: 3px solid #888;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+    display: none;
+}
+
+button.action-button.loading .spinner {
+    display: inline-block;
+}
+
+button.action-button.loading .btn-text {
+    opacity: 0.6;
 }
