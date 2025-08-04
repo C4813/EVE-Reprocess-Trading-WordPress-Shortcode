@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
-    const copyToolbarBtn = document.getElementById('copy_toolbar_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
     const tableWrapper = document.getElementById('price_table_wrapper');
     const outputTable = document.getElementById('output_price_table');
@@ -22,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taxOutput = document.getElementById('reprocess_tax');
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
+
     const customBrokerageInput = document.getElementById('custom_brokerage_input');
     const customTaxInput = document.getElementById('custom_tax_input');
 
@@ -140,34 +140,27 @@ document.addEventListener('DOMContentLoaded', () => {
             : results.map(name => `<li>${name}</li>`).join('');
 
         marketGroupResultsWrapper.style.display = 'block';
-        generatePricesBtn.style.display = 'inline-flex';
+        generatePricesBtn.style.display = 'inline-block';
     }
 
     generateBtn.addEventListener('click', () => {
-        generateBtn.disabled = true;
-        generateBtn.classList.add('loading');
-        generateBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Generate List</span>`;
-
-        outputTableBody.innerHTML = '';
-        tableWrapper.style.display = 'none';
-        marketGroupResultsWrapper.style.display = 'none';
-        generatePricesBtn.style.display = 'none';
-
-        setTimeout(() => {
-            updateMarketGroupResults();
-            generateBtn.disabled = false;
-            generateBtn.classList.remove('loading');
-            generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
-        }, 400);
+        updateMarketGroupResults();
     });
 
     generatePricesBtn.addEventListener('click', () => {
         generatePricesBtn.disabled = true;
-        generatePricesBtn.classList.add('loading');
-        generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Generate Prices</span>`;
+        generatePricesBtn.innerHTML = `<span class="spinner"></span> Generating...`;
 
         const isPrivate = hubSelect.value === 'private';
         outputTableBody.innerHTML = '';
+        tableWrapper.style.display = 'none';
+
+        const finishGenerate = () => {
+            tableWrapper.style.display = 'block';
+            generatePricesBtn.disabled = false;
+            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+        };
+
         if (isPrivate) {
             const minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
             minerals.forEach(mineral => {
@@ -217,13 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Fetch error:", err);
                     finishGenerate();
                 });
-        }
-
-        function finishGenerate() {
-            tableWrapper.style.display = 'block';
-            generatePricesBtn.disabled = false;
-            generatePricesBtn.classList.remove('loading');
-            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
         }
     });
 
