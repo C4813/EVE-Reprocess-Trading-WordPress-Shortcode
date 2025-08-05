@@ -37,12 +37,12 @@
         <div class="eve-col">
             <div id="standing_inputs_wrapper">
                 <label><span id="faction_label">Base Caldari State Standing</span>
-                    <input id="faction_standing_input" type="number" class="eve-input" step="0.01" min="-10" max="10" value="0.0" />
+                    <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00" />
                 </label>
                 <div id="faction_standing_result" class="output">Effective: 0.00</div>
 
                 <label><span id="corp_label">Base Caldari Navy Standing</span>
-                    <input id="corp_standing_input" type="number" class="eve-input" step="0.01" min="-10" max="10" value="0.0" />
+                    <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00" />
                 </label>
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
             </div>
@@ -56,20 +56,21 @@
         </div>
     </div>
 
-    <!-- Market Group Filter, now moved below skills/standings -->
+    <!-- Market Group Filter -->
     <div id="market_group_filter" style="margin-top: 30px;">
         <label>Filter Market Group
             <select id="market_group_select" class="eve-input">
                 <option value="11">Ammunition & Charges</option>
                 <option value="157">Drones</option>
-                <option value="24">Implants</option>
+                <option value="27">Implants</option>
                 <option value="4">Ships</option>
                 <option value="9" selected>Ship Equipment</option>
-                <option value="955">Rigs and Subsystems</option>
+                <option value="955">Ship and Module Modifications</option>
             </select>
         </label>
     </div>
-    <!-- Include T2? Toggle -->
+
+    <!-- Include T2 Modules? Toggle -->
     <div id="t2_toggle_wrapper" style="margin:18px 0 12px 0;">
         <label>
             Include T2?
@@ -91,30 +92,30 @@
         <div style="margin-bottom: 15px;">
             <label style="display:block; margin-bottom:4px;">Include Secondary Trade Hubs?</label>
             <select id="include_secondary" class="eve-input">
-                <option value="no">No</option>
                 <option value="yes" selected>Yes</option>
+                <option value="no">No</option>
             </select>
         </div>
         <!-- Sell To option -->
-        <div style="margin-bottom: 12px;">
+        <div>
             <label style="display:block; margin-bottom:4px;">Sell To</label>
             <select id="sell_to_select" class="eve-input">
                 <option value="buy">Buy Orders</option>
                 <option value="sell" selected>Sell Orders</option>
             </select>
         </div>
+    </div>
 
-        <!-- Margin % Fields (initially hidden by script.js) -->
-        <div id="margin_fields_wrapper" style="display:none; margin-bottom:12px;">
-            <label style="display:inline-block; margin-right:12px;">
-                Minimum Margin %<br>
-                <input id="min_margin" type="number" class="eve-input" min="0" value="5" step="0.01" style="width:80px; text-align:right;">
-            </label>
-            <label style="display:inline-block;">
-                Maximum Margin %<br>
-                <input id="max_margin" type="number" class="eve-input" min="0" value="25" step="0.01" style="width:80px; text-align:right;">
-            </label>
-        </div>
+    <!-- Margin Filter Inputs -->
+    <div id="margin_fields_wrapper" style="margin: 20px 0 0 0; display: none;">
+        <label class="eve-input-label">
+            Minimum Margin %:
+            <input type="number" id="min_margin" class="eve-input" min="0" value="5" step="0.01" />
+        </label>
+        <label class="eve-input-label">
+            Maximum Margin %:
+            <input type="number" id="max_margin" class="eve-input" min="0" value="25" step="0.01" />
+        </label>
     </div>
 
     <!-- Prices Button -->
@@ -143,7 +144,9 @@
         <ul id="material_list_flat"></ul>
         <ul id="market_group_results"></ul>
     </div>
-    <div id="no_results_message" style="display:none; color:#c00; font-weight:bold; margin:18px auto 0; text-align:center;">
-    No profitable items within your filter parameters
+
+    <!-- No Results Message -->
+    <div id="no_results_message" style="display:none; margin-top: 20px; font-weight: bold; color: #c00;">
+        No profitable items within your filter parameters.
     </div>
 </div>
