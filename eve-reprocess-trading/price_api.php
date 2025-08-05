@@ -174,17 +174,25 @@ file_put_contents($map_file, json_encode($system_map));
 
 // === Chunked cache save ===
 function save_cache_chunks($prefix, $cache, $limit = 150) {
+    // Use a lock file to prevent concurrent writes
+    $lockfile = fopen($prefix . '_lock', 'w+');
+    if ($lockfile === false) return; // Cannot lock, skip saving
+
+    // Block until we have an exclusive lock
+    flock($lockfile, LOCK_EX);
+
     foreach (['buy','sell','volumes'] as $k) {
         if (!isset($cache[$k])) $cache[$k] = [];
     }
     $keys = array_keys($cache['buy'] + $cache['sell'] + $cache['volumes']);
     $chunks = array_chunk($keys, $limit);
+
     // Remove old
     for ($i=1; $i<=99; $i++) {
         $f = "{$prefix}_{$i}.json";
         if (file_exists($f)) unlink($f);
     }
-    // Write new ones
+    // Write new ones to temp and rename atomically
     foreach ($chunks as $i => $set) {
         $chunkArr = ['buy'=>[], 'sell'=>[], 'volumes'=>[]];
         foreach ($set as $mat) {
@@ -192,8 +200,15 @@ function save_cache_chunks($prefix, $cache, $limit = 150) {
             if (isset($cache['sell'][$mat])) $chunkArr['sell'][$mat] = $cache['sell'][$mat];
             if (isset($cache['volumes'][$mat])) $chunkArr['volumes'][$mat] = $cache['volumes'][$mat];
         }
-        file_put_contents("{$prefix}_".($i+1).".json", json_encode($chunkArr));
+        $tmp = "{$prefix}_".($i+1).".json.tmp";
+        $real = "{$prefix}_".($i+1).".json";
+        file_put_contents($tmp, json_encode($chunkArr));
+        rename($tmp, $real); // atomic swap
     }
+
+    fflush($lockfile); // flush before releasing the lock
+    flock($lockfile, LOCK_UN);
+    fclose($lockfile);
 }
 save_cache_chunks($cache_prefix, ['buy'=>$buy,'sell'=>$sell,'volumes'=>$volumes], 150);
 
