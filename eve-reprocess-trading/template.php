@@ -29,7 +29,7 @@
 
     <!-- Market Group Filter -->
     <div id="market_group_filter" style="margin-top: 30px;">
-        <label>Filter Market Group:
+        <label>Filter Market Group
             <select id="market_group_select" class="eve-input">
                 <option value="4">Ships</option>
                 <option value="9" selected>Ship Equipment</option>
