@@ -2,7 +2,7 @@
 /*
 Plugin Name: EVE Reprocess Trading
 Description: Displays trade hub mineral prices, brokerage and tax estimates based on skills and standings.
-Version: 0.5.8
+Version: 0.5.10
 Author: C4813
 */
 
@@ -34,3 +34,32 @@ function eve_reprocess_trading_shortcode() {
 }
 
 add_shortcode('eve_reprocess_trading', 'eve_reprocess_trading_shortcode');
+
+// In your main plugin file (e.g., eve-reprocess-trading.php)
+
+add_shortcode('eve_reprocess_clear_cache', function() {
+    if (!current_user_can('manage_options')) return ''; // Only for admins
+
+    $deleted = false;
+    if (isset($_POST['eve_reprocess_clear_cache'])) {
+        // Find and delete all cache files
+        $pattern = plugin_dir_path(__FILE__) . 'esi_cache_*.json';
+        foreach (glob($pattern) as $filename) {
+            unlink($filename);
+        }
+        $deleted = true;
+    }
+    ob_start();
+    ?>
+    <form method="post" style="margin:30px 0;">
+        <button type="submit" name="eve_reprocess_clear_cache" onclick="return confirm('Are you sure you want to clear the plugin cache?');" style="background: #c0392b; color:#fff; font-weight:bold; padding:10px 24px; border-radius:8px; border:none; font-size:16px;">
+            Clear ESI Cache
+        </button>
+    </form>
+    <?php if ($deleted): ?>
+        <div style="color:#27ae60; font-weight:bold;">ESI cache cleared!</div>
+    <?php endif; ?>
+    <?php
+    return ob_get_clean();
+});
+
