@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
+    const sellToSelect = document.getElementById('sell_to_select');
     const tableWrapper = document.getElementById('price_table_wrapper');
     const outputTable = document.getElementById('output_price_table');
     const outputTableBody = outputTable.querySelector('tbody');
@@ -27,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const customBrokerageInput = document.getElementById('custom_brokerage_input');
     const customTaxInput = document.getElementById('custom_tax_input');
 
-    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {};
+    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {}, currentSellPrices = {};
 
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
@@ -126,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
+        const sellTo = sellToSelect?.value || 'buy';
+
         const minerals = Array.from(materialListFlat.querySelectorAll('li'))
             .map(li => li.textContent.trim())
             .filter(name => name.length > 0 && !name.startsWith('No materials'));
@@ -142,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const allBuy = {};
+        const allSell = {};
 
         const fetchBatch = async (batch) => {
             const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
@@ -157,28 +161,27 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         Promise.all(batches.map(fetchBatch)).then(results => {
-            results.forEach(data => Object.assign(allBuy, data.buy));
-            currentMaterialPrices = allBuy;
-
-        marketGroupResults.querySelectorAll('li').forEach(li => {
-            const itemName = li.dataset.name;
-            const components = JSON.parse(li.dataset.components || '[]');
-        
-            let total = 0;
-            components.forEach(({ mineralName, qty }) => {
-                const price = currentMaterialPrices[mineralName] ?? 0;
-                total += qty * price;
+            results.forEach(data => {
+                Object.assign(allBuy, data.buy || {});
+                Object.assign(allSell, data.sell || {});
             });
-        
-            // Log a warning if the item is missing
-            if (!(itemName in currentMaterialPrices)) {
-                console.warn(`Missing price for item: ${itemName}`);
-            }
-        
-            const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
-        
-            li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
-        });
+            currentMaterialPrices = allBuy;
+            currentSellPrices = allSell;
+
+            marketGroupResults.querySelectorAll('li').forEach(li => {
+                const itemName = li.dataset.name;
+                const components = JSON.parse(li.dataset.components || '[]');
+                const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
+
+                let total = 0;
+                components.forEach(({ mineralName, qty }) => {
+                    const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
+                    total += qty * price;
+                });
+
+                const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
+                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
+            });
 
             generatePricesBtn.disabled = false;
             generatePricesBtn.classList.remove('loading');
