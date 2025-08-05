@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
 
-    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {}, currentSellPrices = {};
+    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
 
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
@@ -142,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const allBuy = {};
         const allSell = {};
+        const allVolumes = {};
 
         const fetchBatch = async (batch) => {
             const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
@@ -160,9 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
             results.forEach(data => {
                 Object.assign(allBuy, data.buy || {});
                 Object.assign(allSell, data.sell || {});
+                Object.assign(allVolumes, data.volumes || {});
             });
             currentMaterialPrices = allBuy;
             currentSellPrices = allSell;
+            currentVolumes = allVolumes;
 
             marketGroupResults.querySelectorAll('li').forEach(li => {
                 const itemName = li.dataset.name;
@@ -176,10 +179,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
-                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
-                
-                // Filter out items with 0 price or not profitable
-                if (itemBuyPrice === 0 || itemBuyPrice > total) {
+                const volume = currentVolumes[itemName] ?? 0;
+
+                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume}]`;
+
+                if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0) {
                     li.style.display = 'none';
                 } else {
                     li.style.display = 'list-item';
