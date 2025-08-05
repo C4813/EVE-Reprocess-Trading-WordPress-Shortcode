@@ -44,6 +44,14 @@
         </select>
     </label>
 
+    <!-- Sell to buy or sell orders -->
+    <label id="sell_to_wrapper">Sell To
+        <select id="sell_to_select" class="eve-input">
+            <option value="buy">Buy Orders</option>
+            <option value="sell" selected>Sell Orders</option>
+        </select>
+    </label>
+
     <!-- Market Group Filter -->
     <div id="market_group_filter" style="margin-top: 30px;">
         <label>Filter Market Group:
