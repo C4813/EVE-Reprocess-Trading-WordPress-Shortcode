@@ -1,6 +1,7 @@
 <?php /* template.php */ ?>
 <div class="eve-reprocess-wrapper">
-    <!-- Hub Selection -->
+
+    <!-- Trade Hub selection -->
     <label>Trade Hub
         <select id="hub_select" class="eve-input">
             <option value="jita" selected>Jita</option>
@@ -10,32 +11,6 @@
             <option value="dodixie">Dodixie</option>
         </select>
     </label>
-
-    <!-- Secondary Hub Toggle -->
-    <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs?
-        <select id="include_secondary" class="eve-input">
-            <option value="no" selected>No</option>
-            <option value="yes">Yes</option>
-        </select>
-    </label>
-
-    <!-- Sell to buy or sell orders -->
-    <label id="sell_to_wrapper">Sell To
-        <select id="sell_to_select" class="eve-input">
-            <option value="buy">Buy Orders</option>
-            <option value="sell" selected>Sell Orders</option>
-        </select>
-    </label>
-
-    <!-- Market Group Filter -->
-    <div id="market_group_filter" style="margin-top: 30px;">
-        <label>Filter Market Group
-            <select id="market_group_select" class="eve-input">
-                <option value="4">Ships</option>
-                <option value="9" selected>Ship Equipment</option>
-            </select>
-        </label>
-    </div>
 
     <!-- Skills & Standings -->
     <div class="eve-skills-columns" style="padding-top: 25px;">
@@ -71,11 +46,7 @@
                 </label>
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
             </div>
-
-            <!-- Effective Skills -->
             <div id="result_skills" class="eve-result-box" style="margin-top: 10px;"></div>
-
-            <!-- Calculated Result Box -->
             <div class="eve-result-box" id="result_main" style="margin-top: 10px;">
                 <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
                 <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
@@ -85,11 +56,43 @@
         </div>
     </div>
 
-    <!-- Buttons -->
+    <!-- Market Group Filter, now moved below skills/standings -->
+    <div id="market_group_filter" style="margin-top: 30px;">
+        <label>Filter Market Group:
+            <select id="market_group_select" class="eve-input">
+                <option value="4">Ships</option>
+                <option value="9" selected>Ship Equipment</option>
+                <!-- Add other groups if needed -->
+            </select>
+        </label>
+    </div>
+
+    <!-- Generate List Button -->
     <button id="generate_btn">
         <span class="btn-text">Generate List</span>
     </button><br>
-    
+
+    <!-- Controls to show only after list is generated -->
+    <div id="after_generate_controls" style="display:none; text-align: center; margin-top: 24px;">
+        <!-- Secondary Trade Hubs option -->
+        <div style="margin-bottom: 15px;">
+            <label style="display:block; margin-bottom:4px;">Include Secondary Trade Hubs?</label>
+            <select id="include_secondary" class="eve-input">
+                <option value="no" selected>No</option>
+                <option value="yes">Yes</option>
+            </select>
+        </div>
+        <!-- Sell To option -->
+        <div>
+            <label style="display:block; margin-bottom:4px;">Sell To</label>
+            <select id="sell_to_select" class="eve-input">
+                <option value="buy">Buy Orders</option>
+                <option value="sell" selected>Sell Orders</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Prices Button -->
     <button id="generate_prices_btn" style="display:none;">
         <span class="btn-text">Generate Prices</span>
     </button>
