@@ -2,7 +2,7 @@
 /*
 Plugin Name: EVE Reprocess Trading
 Description: Displays trade hub mineral prices, brokerage and tax estimates based on skills and standings.
-Version: 0.6.1
+Version: 0.6.2
 Author: C4813
 */
 
