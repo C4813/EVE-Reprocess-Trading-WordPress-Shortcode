@@ -78,17 +78,29 @@
         <div style="margin-bottom: 15px;">
             <label style="display:block; margin-bottom:4px;">Include Secondary Trade Hubs?</label>
             <select id="include_secondary" class="eve-input">
-                <option value="no" selected>No</option>
-                <option value="yes">Yes</option>
+                <option value="no">No</option>
+                <option value="yes" selected>Yes</option>
             </select>
         </div>
         <!-- Sell To option -->
-        <div>
+        <div style="margin-bottom: 12px;">
             <label style="display:block; margin-bottom:4px;">Sell To</label>
             <select id="sell_to_select" class="eve-input">
                 <option value="buy">Buy Orders</option>
                 <option value="sell" selected>Sell Orders</option>
             </select>
+        </div>
+
+        <!-- Margin % Fields (initially hidden by script.js) -->
+        <div id="margin_fields_wrapper" style="display:none; margin-bottom:12px;">
+            <label style="display:inline-block; margin-right:12px;">
+                Minimum Margin %<br>
+                <input id="min_margin" type="number" class="eve-input" min="0" value="5" step="0.01" style="width:80px; text-align:right;">
+            </label>
+            <label style="display:inline-block;">
+                Maximum Margin %<br>
+                <input id="max_margin" type="number" class="eve-input" min="0" value="25" step="0.01" style="width:80px; text-align:right;">
+            </label>
         </div>
     </div>
 
