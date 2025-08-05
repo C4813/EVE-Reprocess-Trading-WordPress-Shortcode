@@ -274,26 +274,30 @@ button .btn-text {
 /* Margin % Filter Fields Styling */
 #margin_fields_wrapper {
     display: flex;
-    flex-direction: row;
-    gap: 24px;
+    flex-direction: column; /* stack vertically */
+    gap: 16px; /* vertical spacing */
     justify-content: center;
-    align-items: flex-end;
+    align-items: center; /* center horizontally */
     margin-bottom: 14px;
 }
 
 #margin_fields_wrapper label {
     font-weight: bold;
     margin: 0;
-    align-items: flex-end;
-    width: auto;
+    width: auto;      /* change from 100% to auto */
+    max-width: none;  /* remove max-width */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;  /* center text */
 }
 
 #margin_fields_wrapper input[type="number"] {
-    width: 80px;
-    max-width: 120px;
+    width: 200px;
+    max-width: 100%;
     font-size: 14px;
     padding: 7px 6px;
-    text-align: right;
+    text-align: center;
     border-radius: 6px;
     border: 1px solid #ccc;
     background: #fff;
@@ -303,4 +307,13 @@ button .btn-text {
 #margin_fields_wrapper input[type="number"]:focus {
     outline: 2px solid #444;
     border-color: #888;
+}
+
+#t2_toggle_wrapper label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#t2_toggle_wrapper select {
+    margin-top: 4px;
 }
