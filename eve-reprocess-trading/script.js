@@ -293,8 +293,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const netTotal = total - taxAmount;
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
+            
+            // Calculate margin using full precision netTotal
             let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
             margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
+            
+            // Format values for display
+            const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
+            const formattedNet = Math.floor(netTotal).toString();
+            
+            li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
 
             // Margin filter
             if (
@@ -307,7 +315,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             ) {
                 li.style.display = 'none';
             } else {
-                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${netTotal.toFixed(2)} / ${volume} / ${margin}%]`;
+                const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
+                const formattedNet = Math.floor(netTotal).toString();
+                li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
                 li.style.display = 'list-item';
                 anyVisible = true;
             }
