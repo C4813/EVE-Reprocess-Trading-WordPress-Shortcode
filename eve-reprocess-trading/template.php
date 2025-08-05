@@ -60,9 +60,12 @@
     <div id="market_group_filter" style="margin-top: 30px;">
         <label>Filter Market Group
             <select id="market_group_select" class="eve-input">
+                <option value="8">Ammunition & Charges</option>
+                <option value="11">Drones</option>
+                <option value="24">Implants & Boosters</option>
                 <option value="4">Ships</option>
                 <option value="9" selected>Ship Equipment</option>
-                <!-- Add other groups if needed -->
+                <option value="475">Ship and Module Modifications</option>
             </select>
         </label>
     </div>
@@ -139,5 +142,8 @@
         <h3>Items in Selected Market Group</h3>
         <ul id="material_list_flat"></ul>
         <ul id="market_group_results"></ul>
+    </div>
+    <div id="no_results_message" style="display:none; color:#c00; font-weight:bold; margin:18px auto 0; text-align:center;">
+    No profitable items within your filter parameters
     </div>
 </div>
