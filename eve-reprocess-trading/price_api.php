@@ -7,7 +7,7 @@ function log_debug($msg) {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$hub = $input['hub'] ?? 'jita';
+$hub = strtolower($input['hub'] ?? 'jita');
 $scope = ($input['includeSecondary'] ?? 'no') === 'yes' ? 'secondary' : 'primary';
 $requestedMaterials = $input['materials'] ?? [];
 
@@ -22,7 +22,6 @@ $hub_map = [
 if (!isset($hub_map[$hub])) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid hub']);
-    log_debug("Invalid hub requested: $hub");
     exit;
 }
 
@@ -35,64 +34,51 @@ $map_file = __DIR__ . "/location_system_map.json";
 $system_map = file_exists($map_file) ? json_decode(file_get_contents($map_file), true) : [];
 
 $cache_file = __DIR__ . "/esi_cache_{$hub}_{$scope}.json";
-$CACHE_LIFETIME = 21600; // 6 hours
+$cache_ttl = 21600; // 6 hours
 
-// Helper: Get typeID from name
-function get_typeid($name, $invTypes) {
-    return isset($invTypes[$name]['typeID']) ? $invTypes[$name]['typeID'] : null;
+// Load the existing cache if available and valid
+$cache = [];
+if (file_exists($cache_file) && (time() - filemtime($cache_file)) < $cache_ttl) {
+    $cache = json_decode(file_get_contents($cache_file), true) ?: [];
+    log_debug("Loaded from cache: $cache_file");
 }
 
-// Helper: Get name from typeID
-function get_name($typeID, $invTypes) {
-    foreach ($invTypes as $name => $data) {
-        if (isset($data['typeID']) && $data['typeID'] == $typeID) return $name;
-    }
-    return null;
-}
+// Set up output arrays with cached values where possible
+$buy = $cache['buy'] ?? [];
+$sell = $cache['sell'] ?? [];
+$volumes = $cache['volumes'] ?? [];
 
-// Load existing cache, or initialize empty
-$cache = file_exists($cache_file) ? json_decode(file_get_contents($cache_file), true) : [];
-if (!is_array($cache)) $cache = [];
-$now = time();
-
-$buy = $sell = $volumes = [];
-$typeIDs_needed = [];
-$name_for_typeid = [];
-
-// Find what needs to be fetched
-foreach ($requestedMaterials as $name) {
-    $typeID = get_typeid($name, $invTypes);
-    $name_for_typeid[$typeID] = $name;
-    if (!$typeID) continue;
-    $found = isset($cache[$typeID]);
-    $fresh = $found && ($now - $cache[$typeID]['timestamp'] <= $CACHE_LIFETIME);
-    if ($found && $fresh) {
-        $buy[$name] = $cache[$typeID]['buy'];
-        $sell[$name] = $cache[$typeID]['sell'];
-        $volumes[$name] = $cache[$typeID]['volume'];
-    } else {
-        $typeIDs_needed[$typeID] = $name;
+// Which materials need to be fetched
+$toFetch = [];
+foreach ($requestedMaterials as $mat) {
+    // Only fetch if missing or value is 0 (could refine this: 0 could mean "no market", but safe for now)
+    if (!isset($buy[$mat]) || !isset($sell[$mat]) || !isset($volumes[$mat]) || $buy[$mat] === 0 || $sell[$mat] === 0 || $volumes[$mat] === 0) {
+        $toFetch[] = $mat;
+        $buy[$mat] = 0;
+        $sell[$mat] = 0;
+        $volumes[$mat] = 0;
     }
 }
 
-log_debug("Request for hub=$hub, scope=$scope, " . count($requestedMaterials) . " materials, " . count($typeIDs_needed) . " needed.");
-
-// ----------- Market order & volume fetch logic -------------
-function resolve_system_id($locationID, &$map) {
+// Updated system ID resolver for player structures
+function resolve_system_id($locationID, &$map, $primary_system, $secondary_system, $scope) {
     if (isset($map[$locationID])) return $map[$locationID];
     if ($locationID >= 1000000000000) {
-        $map[$locationID] = null;
-        log_debug("Skipped player structure: $locationID");
-        return null;
+        $assumed = ($scope === 'secondary') ? $secondary_system : $primary_system;
+        $map[$locationID] = $assumed;
+        log_debug("Assume player structure: $locationID mapped to systemID $assumed (scope: $scope)");
+        return $assumed;
     }
     $url = "https://esi.evetech.net/latest/universe/stations/{$locationID}/";
     $res = @file_get_contents($url);
     $info = json_decode($res, true);
     $systemID = $info['system_id'] ?? null;
     $map[$locationID] = $systemID;
+    log_debug("Station $locationID mapped to systemID $systemID");
     return $systemID;
 }
 
+// Fetch and cache orders for a type
 function fetch_orders_for_type($region_id, $typeID) {
     $orders = [];
     $page = 1;
@@ -104,22 +90,35 @@ function fetch_orders_for_type($region_id, $typeID) {
         if (!is_array($batch) || empty($batch)) break;
         $orders = array_merge($orders, $batch);
         $page++;
-        sleep(1);
+        usleep(200000); // 0.2s pause to avoid ESI errors
     } while (count($batch) === 1000);
     return $orders;
 }
 
-// Fetch and update only needed items
-foreach ($typeIDs_needed as $typeID => $name) {
+// Only fetch what's needed
+foreach ($toFetch as $name) {
+    $typeID = $invTypes[$name]['typeID'] ?? null;
+    if (!$typeID) {
+        log_debug("No typeID for $name, skipping");
+        continue;
+    }
     $orders = fetch_orders_for_type($region_id, $typeID);
     $buyOrders = $sellOrders = [];
 
     foreach ($orders as $order) {
-        $sysID = resolve_system_id($order['location_id'], $system_map);
+        $sysID = resolve_system_id(
+            $order['location_id'],
+            $system_map,
+            $primary_system,
+            $secondary_system,
+            $scope
+        );
         if (!$sysID) continue;
 
         $isPrimary = $sysID === $primary_system;
         $isSecondary = $sysID === $secondary_system;
+
+        log_debug("Order for $name: price={$order['price']} sysID=$sysID isPrimary=" . ($isPrimary ? 1 : 0) . " isSecondary=" . ($isSecondary ? 1 : 0));
 
         if ($scope === 'primary' && !$isPrimary) continue;
         if ($scope === 'secondary' && !$isPrimary && !$isSecondary) continue;
@@ -131,6 +130,7 @@ foreach ($typeIDs_needed as $typeID => $name) {
         }
     }
 
+    // Sort and select best prices
     $primaryBuys = array_filter($buyOrders, fn($o) => $o['system_id'] === $primary_system);
     $secondaryBuys = array_filter($buyOrders, fn($o) => $o['system_id'] === $secondary_system);
     $primarySells = array_filter($sellOrders, fn($o) => $o['system_id'] === $primary_system);
@@ -145,10 +145,13 @@ foreach ($typeIDs_needed as $typeID => $name) {
     $bestSell = min($primarySells[0]['price'] ?? INF, $secondarySells[0]['price'] ?? INF);
     if ($bestSell === INF) $bestSell = 0;
 
+    log_debug("Best Buy for $name: primary=" . ($primaryBuys[0]['price'] ?? 0) . ", secondary=" . ($secondaryBuys[0]['price'] ?? 0) . " => chosen $bestBuy");
+    log_debug("Best Sell for $name: primary=" . ($primarySells[0]['price'] ?? 0) . ", secondary=" . ($secondarySells[0]['price'] ?? 0) . " => chosen $bestSell");
+
     $buy[$name] = $bestBuy;
     $sell[$name] = $bestSell;
 
-    // Fetch trade volume (regional)
+    // Volumes (by region, can't be split by system)
     $history = @file_get_contents("https://esi.evetech.net/latest/markets/{$region_id}/history/?type_id={$typeID}");
     $data = json_decode($history, true);
     if (is_array($data) && count($data) > 0) {
@@ -156,24 +159,20 @@ foreach ($typeIDs_needed as $typeID => $name) {
     } else {
         $volumes[$name] = 0;
     }
-
-    // Write back to cache
-    $cache[$typeID] = [
-        'buy' => $buy[$name],
-        'sell' => $sell[$name],
-        'volume' => $volumes[$name],
-        'timestamp' => $now,
-    ];
-
-    log_debug("Updated cache for $typeID ($name): buy={$buy[$name]}, sell={$sell[$name]}, volume={$volumes[$name]}");
 }
 
-// Save system map and cache
+// Save updates
 file_put_contents($map_file, json_encode($system_map));
-file_put_contents($cache_file, json_encode($cache, JSON_PRETTY_PRINT));
+file_put_contents($cache_file, json_encode(['buy' => $buy, 'sell' => $sell, 'volumes' => $volumes]));
+log_debug("Updated and wrote cache file: $cache_file");
 
-// Final log
-log_debug("Returning for " . count($requestedMaterials) . " items. Cache now has " . count($cache) . " items.");
+// Output only what was requested
+$reply = ['buy' => [], 'sell' => [], 'volumes' => []];
+foreach ($requestedMaterials as $mat) {
+    $reply['buy'][$mat] = $buy[$mat] ?? 0;
+    $reply['sell'][$mat] = $sell[$mat] ?? 0;
+    $reply['volumes'][$mat] = $volumes[$mat] ?? 0;
+}
 
 ob_end_clean();
-echo json_encode(['buy' => $buy, 'sell' => $sell, 'volumes' => $volumes]);
+echo json_encode($reply);
