@@ -228,14 +228,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         const components = Object.entries(yieldData)
                             .map(([matID, qty]) => {
-                                const adjustedQty = Math.floor(qty * yieldPercent);
-                                if (adjustedQty < 1) return null;
                                 const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                                 const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
-                                materialSet.add(mineralName);
-                                return { mineralName, qty: adjustedQty };
+                                // Do NOT floor here! Store the unfloored value:
+                                return { mineralName, rawQty: qty * yieldPercent };
                             })
-                            .filter(Boolean);
+                            .filter(c => c.rawQty >= 0.01); // filter out true zeros, leave as rawQty
 
                         itemBreakdown.push({ name, components });
                     });
@@ -306,24 +304,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
-
+    
         let minMargin = minMarginInput ? parseFloat(minMarginInput.value) : 5;
         let maxMargin = maxMarginInput ? parseFloat(maxMarginInput.value) : 25;
-
+    
         let minDailyVolume = 1;
         if (minDailyVolumeInput) {
             let v = parseInt(minDailyVolumeInput.value, 10);
             minDailyVolume = (isNaN(v) || v < 1) ? 1 : v;
             minDailyVolumeInput.value = minDailyVolume;
         }
-
+    
         let stackSize = 1;
         if (stackSizeInput) {
             let v = parseInt(stackSizeInput.value, 10);
             stackSize = (isNaN(v) || v < 1) ? 1 : v;
             stackSizeInput.value = stackSize;
         }
-
+    
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
             .filter(Boolean);
@@ -332,7 +330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < itemNames.length; i += batchSize) {
             batches.push(itemNames.slice(i, i + batchSize));
         }
-
+    
         (async () => {
             const priceResults = [];
             for (const batch of batches) {
@@ -345,9 +343,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Object.assign(allSell, data.sell || {});
                 Object.assign(allVolumes, data.volumes || {});
             });
-
+    
             const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
-
+    
             const sellTo = sellToSelect?.value || 'buy';
             let materialsNeeded = new Set();
             filteredItemNames.forEach(itemName => {
@@ -366,7 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             for (let i = 0; i < allNames.length; i += batchSize) {
                 materialBatches.push(allNames.slice(i, i + batchSize));
             }
-
+    
             const finalPriceResults = [];
             for (const batch of materialBatches) {
                 finalPriceResults.push(await fetchBatch(batch));
@@ -381,7 +379,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentMaterialPrices = finalBuy;
             currentSellPrices = finalSell;
             currentVolumes = finalVolumes;
-
+    
             let anyVisible = false;
             marketGroupResults.querySelectorAll('li').forEach(li => {
                 const itemName = li.dataset.name;
@@ -391,42 +389,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-
-                let total = 0;
+    
+                // Stack math: yield for entire stack
+                let totalYieldValue = 0;
                 let adjustedValue = 0;
-                components.forEach(({ mineralName, qty }) => {
-                    const adjustedQty = Math.floor(qty * stackSize);
-                    if (adjustedQty < 1) return;
-                    const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
-                    total += adjustedQty * price;
+                components.forEach(({ mineralName, rawQty }) => {
+                    // THIS is correct:
+                    const totalQty = Math.floor(rawQty * stackSize);
+                    if (totalQty < 1) return;
+                    const price = priceSource === 'sell'
+                        ? currentSellPrices[mineralName] ?? 0
+                        : currentMaterialPrices[mineralName] ?? 0;
+                    totalYieldValue += totalQty * price;
+    
                     const typeID = invTypes[mineralName]?.typeID;
                     if (typeID && adjustedPricesByTypeID[typeID]) {
-                        adjustedValue += adjustedQty * adjustedPricesByTypeID[typeID];
+                        adjustedValue += totalQty * adjustedPricesByTypeID[typeID];
                     }
                 });
-
+    
+                // Per item yield value (based on stack math)
+                const perItemYieldValue = stackSize > 0 ? totalYieldValue / stackSize : 0;
+    
+                // Reprocessing tax
                 const reprocessTaxText = taxOutput.textContent || "0%";
                 const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
                 const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
                 const taxAmount = adjustedValue * reprocessTaxRate;
-
-                const netTotal = total - taxAmount;
+    
+                // Apply tax to per-item yield
+                const netTotal = stackSize > 0 ? (totalYieldValue - taxAmount) / stackSize : 0;
+    
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
-
+    
+                // Margin calculation
                 let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
                 margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-
+    
                 const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
                 const formattedNet = Math.floor(netTotal).toString();
-
+    
                 li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
-
+    
                 if (
                     itemBuyPrice === 0 ||
-                    itemBuyPrice > netTotal ||
+                    perItemYieldValue <= 0 ||
                     volume === 0 ||
-                    margin < 0 ||
                     margin < minMargin ||
                     margin > maxMargin ||
                     volume < minDailyVolume
@@ -437,17 +446,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     anyVisible = true;
                 }
             });
-
+    
             if (!anyVisible) {
                 if (noResultsMessage) noResultsMessage.style.display = 'block';
             } else {
                 if (noResultsMessage) noResultsMessage.style.display = 'none';
             }
-
+    
             generatePricesBtn.disabled = false;
             generatePricesBtn.classList.remove('loading');
             resetGeneratePricesBtn();
-
+    
             maybeShowCopyMarketQuickbar();
         })();
     }
