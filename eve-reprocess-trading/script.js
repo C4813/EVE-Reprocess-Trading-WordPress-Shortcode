@@ -177,9 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
-
-                // Filter out unprofitable items
-                if (itemBuyPrice > total) {
+                
+                // Filter out items with 0 price or not profitable
+                if (itemBuyPrice === 0 || itemBuyPrice > total) {
                     li.style.display = 'none';
                 } else {
                     li.style.display = 'list-item';
