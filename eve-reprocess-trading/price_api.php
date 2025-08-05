@@ -37,21 +37,32 @@ $cache_key = md5(json_encode($requestedMaterials));
 $cache_file = __DIR__ . "/esi_cache_{$hub}_{$scope}_{$cache_key}.json";
 $buy = $sell = $volumes = array_fill_keys($requestedMaterials, 0);
 
-function resolve_system_id($locationID, &$map) {
+/**
+ * Resolve system ID for a location.
+ * - For NPC stations: use ESI.
+ * - For player structures: assign to current hub's system.
+ */
+function resolve_system_id($locationID, &$map, $primary_system, $secondary_system = null) {
     if (isset($map[$locationID])) return $map[$locationID];
-    if ($locationID >= 1000000000000) {
-        $map[$locationID] = null;
-        log_debug("Skipped player structure: $locationID");
-        return null;
+
+    if ($locationID < 1000000000000) {
+        // NPC Station
+        $url = "https://esi.evetech.net/latest/universe/stations/{$locationID}/";
+        $res = @file_get_contents($url);
+        $info = json_decode($res, true);
+        $systemID = $info['system_id'] ?? null;
+    } else {
+        // Player Structure - assign to the primary system (or handle more logic if needed)
+        $systemID = $primary_system;
     }
-    $url = "https://esi.evetech.net/latest/universe/stations/{$locationID}/";
-    $res = @file_get_contents($url);
-    $info = json_decode($res, true);
-    $systemID = $info['system_id'] ?? null;
+
     $map[$locationID] = $systemID;
     return $systemID;
 }
 
+/**
+ * Fetch all market orders for a given typeID in a region.
+ */
 function fetch_orders_for_type($region_id, $typeID) {
     $orders = [];
     $page = 1;
@@ -63,7 +74,7 @@ function fetch_orders_for_type($region_id, $typeID) {
         if (!is_array($batch) || empty($batch)) break;
         $orders = array_merge($orders, $batch);
         $page++;
-        sleep(1);
+        sleep(1); // Rate limit protection: keep this or adjust lower if safe
     } while (count($batch) === 1000);
     return $orders;
 }
@@ -77,7 +88,12 @@ if (!file_exists($cache_file) || (time() - filemtime($cache_file)) > 3600) {
         $buyOrders = $sellOrders = [];
 
         foreach ($orders as $order) {
-            $sysID = resolve_system_id($order['location_id'], $system_map);
+            $sysID = resolve_system_id(
+                $order['location_id'],
+                $system_map,
+                $primary_system,
+                $secondary_system
+            );
             if (!$sysID) continue;
 
             $isPrimary = $sysID === $primary_system;
@@ -110,6 +126,7 @@ if (!file_exists($cache_file) || (time() - filemtime($cache_file)) > 3600) {
         $buy[$name] = $bestBuy;
         $sell[$name] = $bestSell;
 
+        // Volume fetch (7-day average)
         $history = @file_get_contents("https://esi.evetech.net/latest/markets/{$region_id}/history/?type_id={$typeID}");
         $data = json_decode($history, true);
         if (is_array($data) && count($data) > 0) {
