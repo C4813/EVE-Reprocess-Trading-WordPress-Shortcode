@@ -78,6 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         afterGenerateControls.style.display = 'none';
         tableWrapper.style.display = 'none';
         if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
+        const noResultsMessage = document.getElementById('no_results_message');
+        if (noResultsMessage) noResultsMessage.style.display = 'none';
     }
 
     function showAfterGenerateControls() {
@@ -272,6 +274,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 li.style.display = 'list-item';
             }
         });
+        
+        // Show message if no results visible
+        const anyVisible = Array.from(marketGroupResults.querySelectorAll('li')).some(li => li.style.display !== 'none');
+        const noResultsMessage = document.getElementById('no_results_message');
+        if (!anyVisible) {
+            if (noResultsMessage) noResultsMessage.style.display = 'block';
+        } else {
+            if (noResultsMessage) noResultsMessage.style.display = 'none';
+        }
 
         generatePricesBtn.disabled = false;
         generatePricesBtn.classList.remove('loading');
