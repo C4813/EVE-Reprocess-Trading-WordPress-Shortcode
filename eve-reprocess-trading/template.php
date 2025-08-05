@@ -37,12 +37,12 @@
         <div class="eve-col">
             <div id="standing_inputs_wrapper">
                 <label><span id="faction_label">Base Caldari State Standing</span>
-                    <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
+                    <input id="faction_standing_input" type="number" class="eve-input" step="0.01" min="-10" max="10" value="0.0" />
                 </label>
                 <div id="faction_standing_result" class="output">Effective: 0.00</div>
 
                 <label><span id="corp_label">Base Caldari Navy Standing</span>
-                    <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
+                    <input id="corp_standing_input" type="number" class="eve-input" step="0.01" min="-10" max="10" value="0.0" />
                 </label>
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
             </div>
