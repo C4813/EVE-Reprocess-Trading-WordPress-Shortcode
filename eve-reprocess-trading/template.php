@@ -2,7 +2,8 @@
 <div class="eve-reprocess-wrapper">
 
     <!-- Trade Hub selection -->
-    <label>Trade Hub
+    <label>
+        Trade Hub
         <select id="hub_select" class="eve-input">
             <option value="jita" selected>Jita</option>
             <option value="amarr">Amarr</option>
@@ -13,7 +14,7 @@
     </label>
 
     <!-- Skills & Standings -->
-    <div class="eve-skills-columns" style="padding-top: 25px;">
+    <div class="eve-skills-columns">
         <div class="eve-col eve-border-right">
             <?php
             $skills = [
@@ -25,7 +26,8 @@
                 'Scrapmetal Processing' => 'skill_scrapmetal'
             ];
             foreach ($skills as $label => $id): ?>
-                <label><?= $label ?>
+                <label>
+                    <?= $label ?>
                     <select id="<?= $id ?>" class="eve-input">
                         <?php for ($i = 0; $i <= 5; $i++): ?>
                             <option value="<?= $i ?>" <?= $i === 5 ? 'selected' : '' ?>><?= $i ?></option>
@@ -36,18 +38,20 @@
         </div>
         <div class="eve-col">
             <div id="standing_inputs_wrapper">
-                <label><span id="faction_label">Base Caldari State Standing</span>
+                <label>
+                    <span id="faction_label">Base Caldari State Standing</span>
                     <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00" />
                 </label>
                 <div id="faction_standing_result" class="output">Effective: 0.00</div>
 
-                <label><span id="corp_label">Base Caldari Navy Standing</span>
+                <label>
+                    <span id="corp_label">Base Caldari Navy Standing</span>
                     <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00" />
                 </label>
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
             </div>
-            <div id="result_skills" class="eve-result-box" style="margin-top: 10px;"></div>
-            <div class="eve-result-box" id="result_main" style="margin-top: 10px;">
+            <div id="result_skills" class="eve-result-box"></div>
+            <div id="result_main" class="eve-result-box">
                 <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
                 <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
                 <div><strong>Sales Tax:</strong> <span id="sales_tax">0.00%</span></div>
@@ -57,8 +61,9 @@
     </div>
 
     <!-- Market Group Filter -->
-    <div id="market_group_filter" style="margin-top: 30px;">
-        <label>Filter Market Group
+    <div id="market_group_filter">
+        <label>
+            Filter Market Group
             <select id="market_group_select" class="eve-input">
                 <option value="11">Ammunition & Charges</option>
                 <option value="157">Drones</option>
@@ -70,8 +75,19 @@
         </label>
     </div>
 
+    <!-- Exclude T1 Modules? (Meta only) -->
+    <div id="exclude_t1_wrapper" style="display:none;">
+        <label>
+            Exclude T1 Modules? (Meta only?)
+            <select id="exclude_t1" class="eve-input">
+                <option value="yes" selected>Yes</option>
+                <option value="no">No</option>
+            </select>
+        </label>
+    </div>
+
     <!-- Include T2? Toggle -->
-    <div id="t2_toggle_wrapper" style="margin:18px 0 12px 0;">
+    <div id="t2_toggle_wrapper">
         <label>
             Include T2?
             <select id="include_t2" class="eve-input">
@@ -82,56 +98,59 @@
     </div>
 
     <!-- Generate List Button -->
-    <button id="generate_btn">
-        <span class="btn-text">Generate List</span>
-    </button><br>
+    <button id="generate_btn" type="button" class="eve-btn">Generate List</button>
 
-    <!-- Controls shown after list generation -->
-    <div id="after_generate_controls" style="display:none; text-align: center; margin-top: 24px;">
+    <!-- Controls to show only after list is generated -->
+    <div id="after_generate_controls" style="display:none;">
+
         <!-- Secondary Trade Hubs option -->
-        <div style="margin-bottom: 15px;">
-            <label style="display:block; margin-bottom:4px;">Include Secondary Trade Hubs?</label>
+        <div id="secondary_trade_hub_wrapper">
+            <label>Include Secondary Trade Hubs?</label>
             <select id="include_secondary" class="eve-input">
                 <option value="yes" selected>Yes</option>
                 <option value="no">No</option>
             </select>
         </div>
         <!-- Sell To option -->
-        <div>
-            <label style="display:block; margin-bottom:4px;">Sell To</label>
+        <div id="sell_to_wrapper">
+            <label>Sell To</label>
             <select id="sell_to_select" class="eve-input">
                 <option value="buy">Buy Orders</option>
                 <option value="sell" selected>Sell Orders</option>
             </select>
         </div>
-        <!-- Margin Filter Inputs & Volume -->
-        <div id="margin_fields_wrapper" style="margin: 20px 0 0 0; display: none;">
-            <label class="eve-input-label">
+
+        <!-- Margin Filter Inputs -->
+        <div id="margin_fields_wrapper" style="display:none;">
+            <label>
                 Minimum Margin %
                 <input type="number" id="min_margin" class="eve-input" min="0" value="5" step="0.01" />
             </label>
-            <label class="eve-input-label">
+            <label>
                 Maximum Margin %
                 <input type="number" id="max_margin" class="eve-input" min="0" value="25" step="0.01" />
             </label>
-            <label class="eve-input-label">
-                Minimum Daily Volume
-                <input type="number" id="min_daily_volume" class="eve-input" min="1" value="1" step="1" />
-            </label>
-            <label class="eve-input-label">
-                Stack Size
-                <input type="number" id="stack_size" class="eve-input" min="1" value="1" step="1" />
-            </label>
-
         </div>
+
+        <!-- Minimum Daily Volume -->
+        <div id="min_daily_volume_wrapper">
+            <label for="min_daily_volume">
+                Minimum Daily Volume
+                <input id="min_daily_volume" type="number" min="1" step="1" value="1" class="eve-input" />
+            </label>
+        </div>
+        <!-- Stack Size -->
+        <div id="stack_size_wrapper">
+            <label for="stack_size">
+                Stack Size
+                <input id="stack_size" type="number" min="1" step="1" value="1" class="eve-input" />
+            </label>
+        </div>
+
         <!-- Action Buttons -->
         <div id="market_action_buttons">
-            <button id="generate_prices_btn" style="display:none;">
-                <span class="btn-text">Generate Prices</span>
-            </button>
-            <button id="copy_market_quickbar_btn" style="display:none;">
-                <span class="btn-text">Copy Market Quickbar</span>
-            </button>
+            <button id="generate_prices_btn" style="display:none;" type="button" class="eve-btn">Generate Prices</button>
+            <button id="copy_market_quickbar_btn" style="display:none;" type="button" class="eve-btn">Copy Market Quickbar</button>
         </div>
     </div>
 
@@ -151,14 +170,14 @@
     </div>
 
     <!-- Material & Item Breakdown -->
-    <div id="market_group_results_wrapper" style="display:none; margin-top: 20px;">
+    <div id="market_group_results_wrapper" style="display:none;">
         <h3>Items in Selected Market Group</h3>
         <ul id="material_list_flat"></ul>
         <ul id="market_group_results"></ul>
     </div>
 
     <!-- No Results Message -->
-    <div id="no_results_message" style="display:none; margin-top: 20px; font-weight: bold; color: #c00;">
+    <div id="no_results_message" style="display:none; color:#c00; font-weight:bold;">
         No profitable items within your filter parameters.
     </div>
 </div>
