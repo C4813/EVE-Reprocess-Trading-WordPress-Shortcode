@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
+    const copyMarketQuickbarBtn = document.getElementById('copy_market_quickbar_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
     const sellToSelect = document.getElementById('sell_to_select');
     const afterGenerateControls = document.getElementById('after_generate_controls');
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function hideGeneratedResults() {
         marketGroupResultsWrapper.style.display = 'none';
         generatePricesBtn.style.display = 'none';
+        copyMarketQuickbarBtn.style.display = 'none';
         afterGenerateControls.style.display = 'none';
         tableWrapper.style.display = 'none';
         if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
@@ -111,7 +113,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showAfterGenerateControls() {
         afterGenerateControls.style.display = 'block';
         generatePricesBtn.style.display = 'inline-block';
-        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
     }
 
     function updateMarketGroupResults() {
@@ -167,6 +168,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 generateBtn.disabled = false;
                 generateBtn.classList.remove('loading');
                 generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
+
+                // Show margin fields after list is generated
+                if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
             }, 10);
         });
     }
@@ -188,6 +192,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             return { buy: {}, sell: {}, volumes: {} };
         }
     }
+
+    // Copy Market Toolbar button: Show after prices are generated, hide when filters change
+    function maybeShowCopyMarketQuickbar() {
+        const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
+            .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
+        copyMarketQuickbarBtn.style.display = visibleItems.length ? 'inline-block' : 'none';
+    }
+
+    generatePricesBtn.addEventListener('click', () => {
+        // Hide the copy button while prices are generating
+        copyMarketQuickbarBtn.style.display = 'none';
+    });
 
     generatePricesBtn.addEventListener('click', async () => {
         if (noResultsMessage) noResultsMessage.style.display = 'none';
@@ -272,17 +288,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const components = JSON.parse(li.dataset.components || '[]');
             const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
 
-            // Calculate adjusted value and tax
+            // --- Calculate adjusted value and tax ---
             let total = 0;
             let adjustedValue = 0;
             components.forEach(({ mineralName, qty }) => {
                 const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                 total += qty * price;
+                // Find typeID for adjusted price lookup
                 const typeID = invTypes[mineralName]?.typeID;
                 if (typeID && adjustedPricesByTypeID[typeID]) {
                     adjustedValue += qty * adjustedPricesByTypeID[typeID];
                 }
             });
+            // Get reprocessing tax percent from UI
             const reprocessTaxText = taxOutput.textContent || "0%";
             const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
             const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
@@ -292,15 +310,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const netTotal = total - taxAmount;
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
-
+            
             // Calculate margin using full precision netTotal
             let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
             margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-
+            
             // Format values for display
             const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
             const formattedNet = Math.floor(netTotal).toString();
-
+            
             li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
 
             // Margin filter
@@ -314,6 +332,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             ) {
                 li.style.display = 'none';
             } else {
+                const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
+                const formattedNet = Math.floor(netTotal).toString();
+                li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
                 li.style.display = 'list-item';
                 anyVisible = true;
             }
@@ -329,6 +350,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.disabled = false;
         generatePricesBtn.classList.remove('loading');
         generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+
+        // Show Copy Market Toolbar button if there are visible results
+        maybeShowCopyMarketQuickbar();
+    });
+
+    // Copy Market Quickbar functionality
+    copyMarketQuickbarBtn.addEventListener('click', () => {
+        // Get selected market group name
+        const selectedGroup = marketGroupSelect.options[marketGroupSelect.selectedIndex]?.text || 'Unknown Group';
+    
+        const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
+            .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
+    
+        if (!visibleItems.length) return;
+    
+        const quickbarItems = visibleItems.map(li => {
+            let [itemName, bracketData] = li.textContent.split('[');
+            itemName = itemName.trim();
+            if (!bracketData) return `- ${li.textContent}`;
+            bracketData = bracketData.replace(']', '').trim();
+            const bracketParts = bracketData.split('/').map(s => s.trim());
+            const quickbarParts = bracketParts.slice(1, 4);
+            let joined = quickbarParts.join('|');
+            if (joined.length > 25) joined = joined.slice(0, 25);
+            return `- ${itemName} [${joined}]`;
+        });
+    
+        // Add the group at the top
+        const quickbar = `+ ${selectedGroup}\n${quickbarItems.join('\n')}`;
+    
+        navigator.clipboard.writeText(quickbar).then(() => {
+            copyMarketQuickbarBtn.innerHTML = '<span class="btn-text">Copied!</span>';
+            setTimeout(() => {
+                copyMarketQuickbarBtn.innerHTML = '<span class="btn-text">Copy Market Quickbar</span>';
+            }, 1500);
+        });
     });
 
     // Hide results if *any* input EXCEPT secondary/sellto/margin changes
@@ -376,6 +433,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (el) {
             el.addEventListener('input', () => {
                 if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
+                copyMarketQuickbarBtn.style.display = 'none';
             });
         }
     });
@@ -410,14 +468,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const conn = parseFloat(document.getElementById('skill_connections')?.value || 0);
         const diplo = parseFloat(document.getElementById('skill_diplomacy')?.value || 0);
         const scrap = parseFloat(document.getElementById('skill_scrapmetal')?.value || 0);
-
+    
         // Clamp base standings to -10.00 to +10.00
         let baseFaction = parseFloat(factionInput?.value || 0);
         let baseCorp = parseFloat(corpInput?.value || 0);
         const clampStanding = v => Math.max(-10, Math.min(10, v));
         baseFaction = clampStanding(baseFaction);
         baseCorp = clampStanding(baseCorp);
-
+    
         // Calculate effective standings (pre-clamp)
         let factionEff = baseFaction < 0
             ? baseFaction + ((10 - baseFaction) * 0.04 * diplo)
@@ -425,11 +483,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         let corpEff = baseCorp < 0
             ? baseCorp + ((10 - baseCorp) * 0.04 * diplo)
             : baseCorp + ((10 - baseCorp) * 0.04 * conn);
-
+    
         // Clamp effective standings too
         const factionEffClamped = clampStanding(factionEff);
         const corpEffClamped = clampStanding(corpEff);
-
+    
         const brokerFee = Math.max(0, 3 - (0.3 * broker) - (0.03 * baseFaction) - (0.02 * baseCorp));
         const reprocessTax = corpEffClamped <= 0
             ? 5.0
@@ -438,14 +496,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : 0;
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
-
+    
         factionResult.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
         corpResult.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
         brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
         taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
         salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
         yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
-
+    
         resultSkillsBox.style.display = 'block';
         resultSkillsBox.innerHTML = `
             <div><strong>Skill Used (Faction)</strong><br><i>${baseFaction < 0 ? 'Diplomacy' : 'Connections'}</i></div>
