@@ -11,9 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const materialListFlat = document.getElementById('material_list_flat');
     const marketGroupResults = document.getElementById('market_group_results');
     const marketGroupResultsWrapper = document.getElementById('market_group_results_wrapper');
-    const customPriceWrapper = document.getElementById('custom_prices_wrapper');
     const standingInputsWrapper = document.getElementById('standing_inputs_wrapper');
-    const customBrokerageWrapper = document.getElementById('custom_brokerage_wrapper');
     const resultSkillsBox = document.getElementById('result_skills');
     const factionLabel = document.getElementById('faction_label');
     const corpLabel = document.getElementById('corp_label');
@@ -25,8 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const taxOutput = document.getElementById('reprocess_tax');
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
-    const customBrokerageInput = document.getElementById('custom_brokerage_input');
-    const customTaxInput = document.getElementById('custom_tax_input');
 
     let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {}, currentSellPrices = {};
 
@@ -172,17 +168,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const itemName = li.dataset.name;
                 const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-            
+
                 let total = 0;
                 components.forEach(({ mineralName, qty }) => {
                     const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                     total += qty * price;
                 });
-            
+
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
-            
-                // Hide if not profitable
+
+                // Filter out unprofitable items
                 if (itemBuyPrice > total) {
                     li.style.display = 'none';
                 } else {
