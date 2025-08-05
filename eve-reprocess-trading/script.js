@@ -180,9 +180,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
-
-                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume}]`;
-
+                let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
+                margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
+                
+                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
+                
                 if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0) {
                     li.style.display = 'none';
                 } else {
