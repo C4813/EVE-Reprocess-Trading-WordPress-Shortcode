@@ -5,6 +5,7 @@
     text-align: center;
 }
 
+/* Layout: Keep everything vertically stacked and centered */
 .eve-skills-columns,
 .eve-result-row {
     display: flex;
@@ -45,6 +46,7 @@ label {
     text-align: center;
 }
 
+/* Results Output */
 .output {
     width: 200px;
     min-height: 45px;
@@ -88,6 +90,7 @@ label {
     font-weight: normal;
 }
 
+/* Price Table */
 .eve-reprocess-table {
     margin: 30px auto 0;
     border-collapse: collapse;
@@ -106,6 +109,7 @@ label {
     font-weight: bold;
 }
 
+/* Buttons */
 button {
     font-size: 16px;
     font-weight: bold;
@@ -157,53 +161,83 @@ button .btn-text {
     to { transform: rotate(360deg); }
 }
 
-/* After-generate controls (secondary/sell-to) */
-#after_generate_controls {
-    margin: 0 auto;
-    margin-top: 24px;
-    text-align: center;
+/* Filter and Toggles Section */
+#market_group_filter,
+#secondary_toggle_wrapper,
+#sell_to_wrapper,
+#margin_filter_wrapper {
+    margin: 20px 0 0 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
 }
 
-#after_generate_controls label {
+#secondary_toggle_wrapper,
+#sell_to_wrapper,
+#margin_filter_wrapper {
+    margin-top: 10px;
+}
+
+#market_group_filter label,
+#secondary_toggle_wrapper label,
+#sell_to_wrapper label,
+#margin_filter_wrapper label {
     font-weight: bold;
-    margin: 0 0 4px 0;
-    width: 100%;
-    text-align: center;
-    display: block;
+    margin-bottom: 6px;
+    width: auto;
 }
 
-#after_generate_controls select.eve-input {
-    margin-bottom: 12px;
-    margin-top: 0;
-}
-
-/* Market Group Filter below skills */
-#market_group_filter {
-    margin-top: 30px;
-    display: flex;
-    flex-direction: column;
+#margin_filter_wrapper {
+    display: none; /* Hidden until results are generated */
     align-items: center;
-    text-align: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    gap: 16px;
 }
 
-/* Ensure material/item lists, price table, and wrapper are centered */
-#market_group_results_wrapper,
-#market_group_results,
-#material_list_flat {
+#margin_filter_controls {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+/* Responsive design for small screens */
+@media (max-width: 700px) {
+    .eve-skills-columns,
+    .eve-result-row {
+        flex-direction: column;
+        align-items: center;
+    }
+    .eve-border-right,
+    .eve-result-row .eve-col:first-child {
+        border-right: none;
+        padding-right: 0;
+    }
+    .eve-col {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+/* Results List */
+#market_group_results_wrapper {
+    display: none;
+    margin-top: 20px;
+    max-width: 900px;
     margin-left: auto;
     margin-right: auto;
     text-align: left;
-    max-width: 900px;
 }
 
 #market_group_results {
     list-style-type: disc;
     margin: 10px auto;
     padding-left: 20px;
+    max-width: 900px;
     font-size: 14px;
 }
 
@@ -211,10 +245,62 @@ button .btn-text {
     margin: 4px 0;
 }
 
-#secondary_toggle_wrapper {
+#material_list_flat {
     display: none;
 }
 
-#material_list_flat {
-    display: none;
+/* Ensure all controls are centered and spaced */
+.eve-reprocess-wrapper > *,
+#market_group_filter,
+#secondary_toggle_wrapper,
+#sell_to_wrapper,
+#margin_filter_wrapper {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Make sure the toggle/filter controls are not too wide on mobile */
+@media (max-width: 520px) {
+    .eve-input {
+        width: 100%;
+        max-width: 96vw;
+    }
+    #margin_filter_controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Margin % Filter Fields Styling */
+#margin_fields_wrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    justify-content: center;
+    align-items: flex-end;
+    margin-bottom: 14px;
+}
+
+#margin_fields_wrapper label {
+    font-weight: bold;
+    margin: 0;
+    align-items: flex-end;
+    width: auto;
+}
+
+#margin_fields_wrapper input[type="number"] {
+    width: 80px;
+    max-width: 120px;
+    font-size: 14px;
+    padding: 7px 6px;
+    text-align: right;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    margin-top: 4px;
+}
+
+#margin_fields_wrapper input[type="number"]:focus {
+    outline: 2px solid #444;
+    border-color: #888;
 }
