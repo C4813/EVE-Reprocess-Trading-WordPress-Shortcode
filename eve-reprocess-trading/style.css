@@ -5,7 +5,7 @@
     text-align: center;
 }
 
-/* Layout: Keep everything vertically stacked and centered */
+/* Layout: Vertically stacked and centered */
 .eve-skills-columns,
 .eve-result-row {
     display: flex;
@@ -121,6 +121,9 @@ button {
     cursor: pointer;
     margin-top: 30px;
     transition: background-color 0.3s ease;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 button:hover {
@@ -157,8 +160,28 @@ button .btn-text {
     text-align: center;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+/* ACTION BUTTONS: stacked, centered, natural width */
+#market_action_buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+#market_action_buttons button {
+    width: auto;
+    min-width: 220px;
+    margin: 0 auto;
+    display: block;
+}
+
+/* Remove previous button full width if present */
+#generate_prices_btn,
+#copy_market_quickbar_btn {
+    width: auto;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 /* Filter and Toggles Section */
@@ -189,7 +212,7 @@ button .btn-text {
 }
 
 #margin_filter_wrapper {
-    display: none; /* Hidden until results are generated */
+    display: none;
     align-items: center;
     justify-content: center;
     margin-bottom: 15px;
@@ -274,22 +297,22 @@ button .btn-text {
 /* Margin % Filter Fields Styling */
 #margin_fields_wrapper {
     display: flex;
-    flex-direction: column; /* stack vertically */
-    gap: 16px; /* vertical spacing */
+    flex-direction: column;
+    gap: 16px;
     justify-content: center;
-    align-items: center; /* center horizontally */
+    align-items: center;
     margin-bottom: 14px;
 }
 
 #margin_fields_wrapper label {
     font-weight: bold;
     margin: 0;
-    width: auto;      /* change from 100% to auto */
-    max-width: none;  /* remove max-width */
+    width: auto;
+    max-width: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;  /* center text */
+    text-align: center;
 }
 
 #margin_fields_wrapper input[type="number"] {
@@ -316,4 +339,8 @@ button .btn-text {
 }
 #t2_toggle_wrapper select {
     margin-top: 4px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
