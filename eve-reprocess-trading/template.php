@@ -60,12 +60,12 @@
     <div id="market_group_filter" style="margin-top: 30px;">
         <label>Filter Market Group
             <select id="market_group_select" class="eve-input">
-                <option value="8">Ammunition & Charges</option>
-                <option value="11">Drones</option>
-                <option value="24">Implants & Boosters</option>
+                <option value="11">Ammunition & Charges</option>
+                <option value="157">Drones</option>
+                <option value="24">Implants</option>
                 <option value="4">Ships</option>
                 <option value="9" selected>Ship Equipment</option>
-                <option value="475">Ship and Module Modifications</option>
+                <option value="955">Rigs and Subsystems</option>
             </select>
         </label>
     </div>
