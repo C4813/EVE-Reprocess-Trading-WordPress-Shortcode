@@ -126,14 +126,19 @@ document.addEventListener('DOMContentLoaded', () => {
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
-        const materials = Array.from(materialListFlat.querySelectorAll('li'))
+        const minerals = Array.from(materialListFlat.querySelectorAll('li'))
             .map(li => li.textContent.trim())
             .filter(name => name.length > 0 && !name.startsWith('No materials'));
 
+        const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
+            .map(li => li.dataset.name)
+            .filter(Boolean);
+
+        const allNames = Array.from(new Set([...minerals, ...itemNames]));
         const batchSize = 20;
         const batches = [];
-        for (let i = 0; i < materials.length; i += batchSize) {
-            batches.push(materials.slice(i, i + batchSize));
+        for (let i = 0; i < allNames.length; i += batchSize) {
+            batches.push(allNames.slice(i, i + batchSize));
         }
 
         const allBuy = {};
@@ -155,15 +160,25 @@ document.addEventListener('DOMContentLoaded', () => {
             results.forEach(data => Object.assign(allBuy, data.buy));
             currentMaterialPrices = allBuy;
 
-            marketGroupResults.querySelectorAll('li').forEach(li => {
-                const components = JSON.parse(li.dataset.components || '[]');
-                let total = 0;
-                components.forEach(({ mineralName, qty }) => {
-                    const price = currentMaterialPrices[mineralName] || 0;
-                    total += qty * price;
-                });
-                li.textContent = `${li.dataset.name} [${total.toFixed(2)}]`;
+        marketGroupResults.querySelectorAll('li').forEach(li => {
+            const itemName = li.dataset.name;
+            const components = JSON.parse(li.dataset.components || '[]');
+        
+            let total = 0;
+            components.forEach(({ mineralName, qty }) => {
+                const price = currentMaterialPrices[mineralName] ?? 0;
+                total += qty * price;
             });
+        
+            // Log a warning if the item is missing
+            if (!(itemName in currentMaterialPrices)) {
+                console.warn(`Missing price for item: ${itemName}`);
+            }
+        
+            const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
+        
+            li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
+        });
 
             generatePricesBtn.disabled = false;
             generatePricesBtn.classList.remove('loading');
