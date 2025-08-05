@@ -116,34 +116,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Parallel batch helper ---
-    async function fetchAllBatchesParallel(batches, maxConcurrency = 6, delay = 300) {
-        let results = [];
-        let idx = 0;
-        while (idx < batches.length) {
-            const chunk = batches.slice(idx, idx + maxConcurrency);
-            const chunkResults = await Promise.all(chunk.map(fetchBatch));
-            results = results.concat(chunkResults);
-            idx += maxConcurrency;
-            if (idx < batches.length && delay > 0) await new Promise(res => setTimeout(res, delay));
-        }
-        return results;
+    function isResultEmpty(result) {
+        return (
+            Object.keys(result.buy || {}).length === 0 &&
+            Object.keys(result.sell || {}).length === 0 &&
+            Object.keys(result.volumes || {}).length === 0
+        );
     }
 
-    // --- Optimized fetchBatch ---
-    async function fetchBatch(batch, fetchMode = "full") {
-        // fetchMode: "full" = buy, sell, volumes; "price" = buy OR sell only (no volume)
-        const postData = {
-            hub: hubSelect.value,
-            includeSecondary: includeSecondarySelect.value === 'yes',
-            materials: batch
-        };
-        // Pass mode for backend if you want to optimize PHP as well
-        if (fetchMode !== "full") postData.fetchMode = fetchMode;
+    async function fetchBatch(batch) {
         const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(postData)
+            body: JSON.stringify({
+                hub: hubSelect.value,
+                includeSecondary: includeSecondarySelect.value === 'yes',
+                materials: batch
+            })
         });
         const text = await res.text();
         try {
@@ -153,35 +142,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Two-pass optimized price fetching with parallelism ---
+    // --- Two-pass price fetch logic ---
     generatePricesBtn.addEventListener('click', async () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
+        // Get item names only (ignore materials for now)
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
             .filter(Boolean);
-
-        const batchSize = 30, maxConcurrency = 6, delay = 400;
-
-        // --- 1st pass: items only, get buy+sell+volume ---
-        const itemBatches = [];
+        const batchSize = 30;
+        const batches = [];
         for (let i = 0; i < itemNames.length; i += batchSize) {
-            itemBatches.push(itemNames.slice(i, i + batchSize));
+            batches.push(itemNames.slice(i, i + batchSize));
         }
-        const priceResults = await fetchAllBatchesParallel(itemBatches, maxConcurrency, delay);
+
+        // First pass: get prices/volumes for items only
+        const priceResults = [];
+        for (const batch of batches) {
+            priceResults.push(await fetchBatch(batch));
+            await new Promise(res => setTimeout(res, 400));
+        }
         const allBuy = {}, allSell = {}, allVolumes = {};
         priceResults.forEach(data => {
             Object.assign(allBuy, data.buy || {});
             Object.assign(allSell, data.sell || {});
             Object.assign(allVolumes, data.volumes || {});
         });
-
-        // --- Filter: only items with volume > 0
+        // Filter out items with volume = 0
         const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
 
-        // --- 2nd pass: get ONLY necessary prices for filtered items and materials ---
+        // Second pass: get materials for filtered items
         const sellTo = sellToSelect?.value || 'buy';
         let materialsNeeded = new Set();
         filteredItemNames.forEach(itemName => {
@@ -194,42 +186,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (mineralEntry) materialsNeeded.add(mineralEntry[0]);
             });
         });
+        // Remove any items already in filteredItemNames from materialsNeeded
         filteredItemNames.forEach(n => materialsNeeded.delete(n));
-        const materialNames = Array.from(materialsNeeded);
-
-        // --- Only fetch buy for items, buy/sell for materials depending on user ---
-        // Fetch items: always buy (don't need volume anymore)
-        const filteredBatches = [];
-        for (let i = 0; i < filteredItemNames.length; i += batchSize) {
-            filteredBatches.push(filteredItemNames.slice(i, i + batchSize));
-        }
-        // Fetch materials: buy OR sell as selected, NO volume
+        const allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
         const materialBatches = [];
-        for (let i = 0; i < materialNames.length; i += batchSize) {
-            materialBatches.push(materialNames.slice(i, i + batchSize));
+        for (let i = 0; i < allNames.length; i += batchSize) {
+            materialBatches.push(allNames.slice(i, i + batchSize));
         }
 
-        // Fetch filtered items (buy prices only)
-        const filteredItemResults = await fetchAllBatchesParallel(filteredBatches, maxConcurrency, delay);
-        const itemBuy = {};
-        filteredItemResults.forEach(data => Object.assign(itemBuy, data.buy || {}));
-        // Fetch materials (buy OR sell)
-        let materialPrice = {};
-        if (materialBatches.length > 0) {
-            const fetchMode = sellTo === "sell" ? "sell" : "buy";
-            const materialResults = await fetchAllBatchesParallel(materialBatches, maxConcurrency, delay);
-            materialResults.forEach(data => {
-                if (fetchMode === "sell") Object.assign(materialPrice, data.sell || {});
-                else Object.assign(materialPrice, data.buy || {});
-            });
+        // Get prices for filtered items + needed materials
+        const finalPriceResults = [];
+        for (const batch of materialBatches) {
+            finalPriceResults.push(await fetchBatch(batch));
+            await new Promise(res => setTimeout(res, 400));
         }
+        const finalBuy = {}, finalSell = {}, finalVolumes = {};
+        finalPriceResults.forEach(data => {
+            Object.assign(finalBuy, data.buy || {});
+            Object.assign(finalSell, data.sell || {});
+            Object.assign(finalVolumes, data.volumes || {});
+        });
+        currentMaterialPrices = finalBuy;
+        currentSellPrices = finalSell;
+        currentVolumes = finalVolumes;
 
-        // --- Merge all results for display logic
-        currentMaterialPrices = itemBuy;
-        currentSellPrices = materialPrice;
-        currentVolumes = allVolumes;
-
-        // Update UI: only show filtered items
+        // Only show filtered items in the UI
         marketGroupResults.querySelectorAll('li').forEach(li => {
             const itemName = li.dataset.name;
             if (!filteredItemNames.includes(itemName)) {
@@ -237,18 +218,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             const components = JSON.parse(li.dataset.components || '[]');
-            const priceSource = sellTo === 'sell' ? currentSellPrices : currentMaterialPrices;
+            const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
+
+            // Get brokerage and sales tax as numeric values
+            const brokerFee = parseFloat(document.getElementById('broker_fee').textContent) || 0;
+            const salesTax = parseFloat(document.getElementById('sales_tax').textContent) || 0;
+
             let total = 0;
             components.forEach(({ mineralName, qty }) => {
-                const price = priceSource[mineralName] ?? 0;
+                const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                 total += qty * price;
             });
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
-            let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
+
+            // Correct margin calculation: deduct fees from materials value ("proceeds")
+            let proceeds;
+            if (sellTo === 'sell') {
+                proceeds = total * (1 - brokerFee / 100) * (1 - salesTax / 100);
+            } else {
+                proceeds = total * (1 - salesTax / 100);
+            }
+            let margin = itemBuyPrice > 0 ? ((proceeds - itemBuyPrice) / itemBuyPrice) * 100 : 0;
             margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
+
             li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
-            if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0) {
+
+            if (itemBuyPrice === 0 || volume === 0 || margin < 0) {
                 li.style.display = 'none';
             } else {
                 li.style.display = 'list-item';
