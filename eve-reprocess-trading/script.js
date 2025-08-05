@@ -19,6 +19,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const corpLabel = document.getElementById('corp_label');
     const factionInput = document.getElementById('faction_standing_input');
     const corpInput = document.getElementById('corp_standing_input');
+    // Standing input clamping
+    function clampStandingInput(input) {
+        input.addEventListener('blur', () => {
+            let v = parseFloat(input.value);
+            if (isNaN(v)) v = 0;
+            if (v < -10) v = -10;
+            if (v > 10) v = 10;
+            input.value = v.toFixed(2);
+        });
+    }
+    if (factionInput) clampStandingInput(factionInput);
+    if (corpInput) clampStandingInput(corpInput);
     const factionResult = document.getElementById('faction_standing_result');
     const corpResult = document.getElementById('corp_standing_result');
     const brokerFeeOutput = document.getElementById('broker_fee');
@@ -26,9 +38,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
     const marketGroupSelect = document.getElementById('market_group_select');
+    const t2Toggle = document.getElementById('include_t2');
     const marginFieldsWrapper = document.getElementById('margin_fields_wrapper');
     const minMarginInput = document.getElementById('min_margin');
     const maxMarginInput = document.getElementById('max_margin');
+    const noResultsMessage = document.getElementById('no_results_message');
 
     // Data vars
     let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
@@ -45,12 +59,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         return fetch(url).then(r => r.json());
     }
 
-    [invTypes, marketGroups, reprocessYields, metaTypes] = await Promise.all([
+    // Load all data, including adjusted prices!
+    let [invTypesRaw, marketGroupsRaw, reprocessYieldsRaw, metaTypesRaw, adjustedPricesArray] = await Promise.all([
         loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/invMetaTypes.json')
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/invMetaTypes.json'),
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/adjusted_prices.json')
     ]);
+    invTypes = invTypesRaw;
+    marketGroups = marketGroupsRaw;
+    reprocessYields = reprocessYieldsRaw;
+    metaTypes = metaTypesRaw;
+
+    // Map adjusted prices by typeID for fast lookup
+    let adjustedPricesByTypeID = {};
+    adjustedPricesArray.forEach(obj => {
+        if (obj.type_id && typeof obj.adjusted_price === "number") {
+            adjustedPricesByTypeID[obj.type_id] = obj.adjusted_price;
+        }
+    });
 
     function getTopLevelGroup(marketGroupID) {
         let current = marketGroups[marketGroupID];
@@ -63,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function hasValidMetaGroup(typeID) {
         const entry = metaTypes[typeID];
-        const includeT2 = document.getElementById('include_t2')?.value || "no";
+        const includeT2 = t2Toggle?.value || "no";
         if (includeT2 === "yes") {
             return entry === 1 || entry === 2;
         } else {
@@ -71,21 +99,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Hide all result-dependent UI
     function hideGeneratedResults() {
         marketGroupResultsWrapper.style.display = 'none';
         generatePricesBtn.style.display = 'none';
         afterGenerateControls.style.display = 'none';
         tableWrapper.style.display = 'none';
         if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
-        const noResultsMessage = document.getElementById('no_results_message');
         if (noResultsMessage) noResultsMessage.style.display = 'none';
     }
 
     function showAfterGenerateControls() {
         afterGenerateControls.style.display = 'block';
         generatePricesBtn.style.display = 'inline-block';
-        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
     }
 
     function updateMarketGroupResults() {
@@ -145,14 +170,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    function isResultEmpty(result) {
-        return (
-            Object.keys(result.buy || {}).length === 0 &&
-            Object.keys(result.sell || {}).length === 0 &&
-            Object.keys(result.volumes || {}).length === 0
-        );
-    }
-
     async function fetchBatch(batch) {
         const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
             method: 'POST',
@@ -171,20 +188,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Two-pass price fetch logic ---
     generatePricesBtn.addEventListener('click', async () => {
+        if (noResultsMessage) noResultsMessage.style.display = 'none';
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
-        // Get margin values
-        let minMargin = parseFloat(minMarginInput.value) || 5;
-        let maxMargin = parseFloat(maxMarginInput.value) || 25;
-        if (minMargin < 0) minMargin = 0;
-        if (maxMargin < minMargin) maxMargin = minMargin;
-
-        minMarginInput.value = minMargin;
-        maxMarginInput.value = maxMargin;
+        // Margin % filter inputs
+        let minMargin = minMarginInput ? parseFloat(minMarginInput.value) : 5;
+        let maxMargin = maxMarginInput ? parseFloat(maxMarginInput.value) : 25;
 
         // Get item names only (ignore materials for now)
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
@@ -248,7 +260,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentSellPrices = finalSell;
         currentVolumes = finalVolumes;
 
-        // Only show filtered items in the UI, and filter by margin
+        // Only show filtered items in the UI
+        let anyVisible = false;
         marketGroupResults.querySelectorAll('li').forEach(li => {
             const itemName = li.dataset.name;
             if (!filteredItemNames.includes(itemName)) {
@@ -257,27 +270,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             const components = JSON.parse(li.dataset.components || '[]');
             const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
+
+            // --- UPDATED: Calculate adjusted value and tax ---
             let total = 0;
+            let adjustedValue = 0;
             components.forEach(({ mineralName, qty }) => {
                 const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                 total += qty * price;
+                // Find typeID for adjusted price lookup
+                const typeID = invTypes[mineralName]?.typeID;
+                if (typeID && adjustedPricesByTypeID[typeID]) {
+                    adjustedValue += qty * adjustedPricesByTypeID[typeID];
+                }
             });
+            // Get reprocessing tax percent from UI
+            const reprocessTaxText = taxOutput.textContent || "0%";
+            const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
+            const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
+            const taxAmount = adjustedValue * reprocessTaxRate;
+
+            // Subtract tax from total reprocessed value
+            const netTotal = total - taxAmount;
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
-            let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
-            margin = isFinite(margin) ? parseFloat(margin.toFixed(2)) : 0;
-            li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
-            // Filter out invalid, 0-volume, or margin out-of-bounds
-            if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0 || margin < 0 || margin < minMargin || margin > maxMargin) {
+            let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
+            margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
+
+            // Margin filter
+            if (
+                itemBuyPrice === 0 ||
+                itemBuyPrice > netTotal ||
+                volume === 0 ||
+                margin < 0 ||
+                margin < minMargin ||
+                margin > maxMargin
+            ) {
                 li.style.display = 'none';
             } else {
+                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${netTotal.toFixed(2)} / ${volume} / ${margin}%]`;
                 li.style.display = 'list-item';
+                anyVisible = true;
             }
         });
-        
-        // Show message if no results visible
-        const anyVisible = Array.from(marketGroupResults.querySelectorAll('li')).some(li => li.style.display !== 'none');
-        const noResultsMessage = document.getElementById('no_results_message');
+
+        // Show or hide "No profitable items..." message
         if (!anyVisible) {
             if (noResultsMessage) noResultsMessage.style.display = 'block';
         } else {
@@ -289,7 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
     });
 
-    // Hide results if *any* input EXCEPT secondary/sellto changes
+    // Hide results if *any* input EXCEPT secondary/sellto/margin changes
     function hideResultsOnRelevantInput() {
         [
             hubSelect,
@@ -301,23 +337,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('skill_diplomacy'),
             document.getElementById('skill_scrapmetal'),
             marketGroupSelect,
-            document.getElementById('include_t2') // <--- add this line
+            t2Toggle
         ].forEach(el => {
-            el.addEventListener('input', () => {
-                hideGeneratedResults();
-                if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
-            });
+            if (el) {
+                el.addEventListener('input', () => {
+                    hideGeneratedResults();
+                });
+            }
         });
     }
     hideResultsOnRelevantInput();
 
-    // Hide margin fields initially
-    if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
+    // Margin filter fields show/hide
+    function showMarginFields() {
+        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
+    }
+    generatePricesBtn.addEventListener('click', showMarginFields);
 
-    // Listeners
-    generateBtn.addEventListener('click', updateMarketGroupResults);
+    // Hide margin fields when main filters change
+    [
+        hubSelect,
+        factionInput, corpInput,
+        document.getElementById('skill_accounting'),
+        document.getElementById('skill_broker'),
+        document.getElementById('skill_connections'),
+        document.getElementById('skill_criminal'),
+        document.getElementById('skill_diplomacy'),
+        document.getElementById('skill_scrapmetal'),
+        marketGroupSelect,
+        t2Toggle
+    ].forEach(el => {
+        if (el) {
+            el.addEventListener('input', () => {
+                if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
+            });
+        }
+    });
 
-    // Enforce min values and defaults on margin fields
+    // Enforce minimum/maximum margin input rules
     if (minMarginInput) {
         minMarginInput.value = 5;
         minMarginInput.min = 0;
@@ -325,7 +382,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             let v = parseFloat(minMarginInput.value) || 0;
             if (v < 0) v = 0;
             minMarginInput.value = v;
-            if (maxMarginInput && parseFloat(maxMarginInput.value) < v) maxMarginInput.value = v;
         });
     }
     if (maxMarginInput) {
@@ -338,6 +394,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Listeners
+    generateBtn.addEventListener('click', updateMarketGroupResults);
+
     // Skills and result update on load and input
     function updateResults() {
         const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
@@ -345,24 +404,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         const conn = parseFloat(document.getElementById('skill_connections')?.value || 0);
         const diplo = parseFloat(document.getElementById('skill_diplomacy')?.value || 0);
         const scrap = parseFloat(document.getElementById('skill_scrapmetal')?.value || 0);
-        const baseFaction = parseFloat(factionInput?.value || 0);
-        const baseCorp = parseFloat(corpInput?.value || 0);
-
-        const factionEff = baseFaction < 0 ? baseFaction + ((10 - baseFaction) * 0.04 * diplo) : baseFaction + ((10 - baseFaction) * 0.04 * conn);
-        const corpEff = baseCorp < 0 ? baseCorp + ((10 - baseCorp) * 0.04 * diplo) : baseCorp + ((10 - baseCorp) * 0.04 * conn);
-
+    
+        // Clamp base standings to -10.00 to +10.00
+        let baseFaction = parseFloat(factionInput?.value || 0);
+        let baseCorp = parseFloat(corpInput?.value || 0);
+        const clampStanding = v => Math.max(-10, Math.min(10, v));
+        baseFaction = clampStanding(baseFaction);
+        baseCorp = clampStanding(baseCorp);
+    
+        // Calculate effective standings (pre-clamp)
+        let factionEff = baseFaction < 0
+            ? baseFaction + ((10 - baseFaction) * 0.04 * diplo)
+            : baseFaction + ((10 - baseFaction) * 0.04 * conn);
+        let corpEff = baseCorp < 0
+            ? baseCorp + ((10 - baseCorp) * 0.04 * diplo)
+            : baseCorp + ((10 - baseCorp) * 0.04 * conn);
+    
+        // Clamp effective standings too
+        const factionEffClamped = clampStanding(factionEff);
+        const corpEffClamped = clampStanding(corpEff);
+    
         const brokerFee = Math.max(0, 3 - (0.3 * broker) - (0.03 * baseFaction) - (0.02 * baseCorp));
-        const reprocessTax = corpEff <= 0 ? 5.0 : corpEff < 6.67 ? +(0.05 * (1 - corpEff / 6.67)).toFixed(4) * 100 : 0;
+        const reprocessTax = corpEffClamped <= 0
+            ? 5.0
+            : corpEffClamped < 6.67
+                ? +(0.05 * (1 - corpEffClamped / 6.67)).toFixed(4) * 100
+                : 0;
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
-
-        factionResult.textContent = `Effective: ${factionEff.toFixed(2)}`;
-        corpResult.textContent = `Effective: ${corpEff.toFixed(2)}`;
+    
+        factionResult.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
+        corpResult.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
         brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
         taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
         salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
         yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
-
+    
         resultSkillsBox.style.display = 'block';
         resultSkillsBox.innerHTML = `
             <div><strong>Skill Used (Faction)</strong><br><i>${baseFaction < 0 ? 'Diplomacy' : 'Connections'}</i></div>
