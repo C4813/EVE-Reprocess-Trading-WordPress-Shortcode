@@ -58,11 +58,21 @@
 
     <!-- Market Group Filter, now moved below skills/standings -->
     <div id="market_group_filter" style="margin-top: 30px;">
-        <label>Filter Market Group:
+        <label>Filter Market Group
             <select id="market_group_select" class="eve-input">
                 <option value="4">Ships</option>
                 <option value="9" selected>Ship Equipment</option>
                 <!-- Add other groups if needed -->
+            </select>
+        </label>
+    </div>
+    <!-- Include T2? Toggle -->
+    <div id="t2_toggle_wrapper" style="margin:18px 0 12px 0;">
+        <label>
+            Include T2?
+            <select id="include_t2" class="eve-input">
+                <option value="no" selected>No</option>
+                <option value="yes">Yes</option>
             </select>
         </label>
     </div>
