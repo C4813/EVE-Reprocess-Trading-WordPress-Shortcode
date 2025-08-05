@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const minMarginInput = document.getElementById('min_margin');
     const maxMarginInput = document.getElementById('max_margin');
     const minDailyVolumeInput = document.getElementById('min_daily_volume');
+    const stackSizeInput = document.getElementById('stack_size');
     const noResultsMessage = document.getElementById('no_results_message');
 
     // Track if market list and prices are up to date with filter settings
@@ -56,7 +57,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         tableWrapper.style.display = 'none';
         copyMarketQuickbarBtn.style.display = 'none';
         if (noResultsMessage) noResultsMessage.style.display = 'none';
-        // Change "Generate Prices" to "Regenerate List & Prices"
         setGeneratePricesBtnToRegenerate();
         needRegenerateListAndPrices = true;
     }
@@ -97,7 +97,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         sellToSelect,
         minMarginInput,
         maxMarginInput,
-        minDailyVolumeInput
+        minDailyVolumeInput,
+        stackSizeInput
     ].forEach(el => {
         if (el) {
             el.addEventListener('input', hideMarketGroupResultsOnly);
@@ -184,14 +185,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const yieldData = reprocessYields[typeID];
                         if (!yieldData) return;
 
+                        // For stack size, use default 1 if input missing or invalid
+                        let stackSize = 1;
+                        if (stackSizeInput) {
+                            let v = parseInt(stackSizeInput.value, 10);
+                            stackSize = (isNaN(v) || v < 1) ? 1 : v;
+                        }
+
                         const components = Object.entries(yieldData)
                             .map(([matID, qty]) => {
-                                const adjustedQty = Math.floor(qty * yieldPercent);
-                                if (adjustedQty < 1) return null;
+                                // Multiply qty * stack size, then floor, then divide by stack size for per-item yield
+                                const rawTotal = qty * yieldPercent * stackSize;
+                                const flooredTotal = Math.floor(rawTotal);
+                                const perItem = flooredTotal / stackSize;
+                                if (perItem < 1 / stackSize) return null; // skip truly zero values for this stack
                                 const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                                 const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
                                 materialSet.add(mineralName);
-                                return { mineralName, qty: adjustedQty };
+                                return { mineralName, qty: perItem };
                             })
                             .filter(Boolean);
 
@@ -217,7 +228,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Show margin fields after list is generated
                 if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
 
-                // Reset generate prices button and "need regeneration" flag
                 resetGeneratePricesBtn();
                 needRegenerateListAndPrices = false;
             }, 10);
@@ -242,7 +252,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Copy Market Toolbar button: Show after prices are generated, hide when filters change
     function maybeShowCopyMarketQuickbar() {
         const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
             .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
@@ -250,13 +259,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     generatePricesBtn.addEventListener('click', async () => {
-        // If price filters have changed, we need to regenerate the list too
         if (needRegenerateListAndPrices) {
             updateMarketGroupResults();
-            // Wait a little for DOM updates (could optimize, but this works for now)
             setTimeout(() => {
                 runGeneratePrices();
-            }, 300); // 300ms for UI redraw
+            }, 300);
         } else {
             runGeneratePrices();
         }
@@ -268,19 +275,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
-        // Margin % filter inputs
         let minMargin = minMarginInput ? parseFloat(minMarginInput.value) : 5;
         let maxMargin = maxMarginInput ? parseFloat(maxMarginInput.value) : 25;
 
-        // --- Minimum Daily Volume Filter: get and validate user input ---
         let minDailyVolume = 1;
         if (minDailyVolumeInput) {
             let v = parseInt(minDailyVolumeInput.value, 10);
             minDailyVolume = (isNaN(v) || v < 1) ? 1 : v;
-            minDailyVolumeInput.value = minDailyVolume; // Auto-correct on click too
+            minDailyVolumeInput.value = minDailyVolume;
         }
 
-        // Get item names only (ignore materials for now)
+        let stackSize = 1;
+        if (stackSizeInput) {
+            let v = parseInt(stackSizeInput.value, 10);
+            stackSize = (isNaN(v) || v < 1) ? 1 : v;
+            stackSizeInput.value = stackSize;
+        }
+
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
             .filter(Boolean);
@@ -290,7 +301,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             batches.push(itemNames.slice(i, i + batchSize));
         }
 
-        // First pass: get prices/volumes for items only
         (async () => {
             const priceResults = [];
             for (const batch of batches) {
@@ -303,10 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Object.assign(allSell, data.sell || {});
                 Object.assign(allVolumes, data.volumes || {});
             });
-            // Filter out items with volume = 0
             const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
 
-            // Second pass: get materials for filtered items
             const sellTo = sellToSelect?.value || 'buy';
             let materialsNeeded = new Set();
             filteredItemNames.forEach(itemName => {
@@ -319,7 +327,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (mineralEntry) materialsNeeded.add(mineralEntry[0]);
                 });
             });
-            // Remove any items already in filteredItemNames from materialsNeeded
             filteredItemNames.forEach(n => materialsNeeded.delete(n));
             const allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
             const materialBatches = [];
@@ -327,7 +334,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 materialBatches.push(allNames.slice(i, i + batchSize));
             }
 
-            // Get prices for filtered items + needed materials
             const finalPriceResults = [];
             for (const batch of materialBatches) {
                 finalPriceResults.push(await fetchBatch(batch));
@@ -343,7 +349,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSellPrices = finalSell;
             currentVolumes = finalVolumes;
 
-            // Only show filtered items in the UI
             let anyVisible = false;
             marketGroupResults.querySelectorAll('li').forEach(li => {
                 const itemName = li.dataset.name;
@@ -351,43 +356,45 @@ document.addEventListener('DOMContentLoaded', async () => {
                     li.style.display = 'none';
                     return;
                 }
-                const components = JSON.parse(li.dataset.components || '[]');
+                // Use stack size in calculations
+                let components = JSON.parse(li.dataset.components || '[]');
+                // Make sure each component is rounded DOWN to nearest whole number after multiplying by stackSize
+                components = components.map(comp => {
+                    // At this stage, comp.qty is already per-item, but was calculated with correct stackSize logic
+                    // If you want to display further per-item values (such as for price), use comp.qty directly
+                    return comp;
+                });
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
 
-                // --- Calculate adjusted value and tax ---
                 let total = 0;
                 let adjustedValue = 0;
                 components.forEach(({ mineralName, qty }) => {
+                    // qty is already correct (per item, with stack logic/flooring applied)
                     const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                     total += qty * price;
-                    // Find typeID for adjusted price lookup
                     const typeID = invTypes[mineralName]?.typeID;
                     if (typeID && adjustedPricesByTypeID[typeID]) {
                         adjustedValue += qty * adjustedPricesByTypeID[typeID];
                     }
                 });
-                // Get reprocessing tax percent from UI
+
                 const reprocessTaxText = taxOutput.textContent || "0%";
                 const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
                 const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
                 const taxAmount = adjustedValue * reprocessTaxRate;
 
-                // Subtract tax from total reprocessed value
                 const netTotal = total - taxAmount;
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
-                
-                // Calculate margin using full precision netTotal
+
                 let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
                 margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-                
-                // Format values for display
+
                 const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
                 const formattedNet = Math.floor(netTotal).toString();
-                
+
                 li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
 
-                // Margin & Volume filter
                 if (
                     itemBuyPrice === 0 ||
                     itemBuyPrice > netTotal ||
@@ -399,15 +406,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ) {
                     li.style.display = 'none';
                 } else {
-                    const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
-                    const formattedNet = Math.floor(netTotal).toString();
                     li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
                     li.style.display = 'list-item';
                     anyVisible = true;
                 }
             });
 
-            // Show or hide "No profitable items..." message
             if (!anyVisible) {
                 if (noResultsMessage) noResultsMessage.style.display = 'block';
             } else {
@@ -418,12 +422,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             generatePricesBtn.classList.remove('loading');
             resetGeneratePricesBtn();
 
-            // Show Copy Market Toolbar button if there are visible results
             maybeShowCopyMarketQuickbar();
         })();
     }
 
-    // --- Minimum Daily Volume Filter: input validation (auto-correct) ---
+    // --- Minimum Daily Volume Filter & Stack Size Input: input validation (auto-correct) ---
     if (minDailyVolumeInput) {
         minDailyVolumeInput.value = 1;
         minDailyVolumeInput.min = 1;
@@ -439,17 +442,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             minDailyVolumeInput.value = v;
         });
     }
+    if (stackSizeInput) {
+        stackSizeInput.value = 1;
+        stackSizeInput.min = 1;
+        stackSizeInput.step = 1;
+        stackSizeInput.addEventListener('input', () => {
+            let v = parseInt(stackSizeInput.value, 10);
+            if (isNaN(v) || v < 1) v = 1;
+            stackSizeInput.value = v;
+        });
+        stackSizeInput.addEventListener('blur', () => {
+            let v = parseInt(stackSizeInput.value, 10);
+            if (isNaN(v) || v < 1) v = 1;
+            stackSizeInput.value = v;
+        });
+    }
 
     // Copy Market Quickbar functionality
     copyMarketQuickbarBtn.addEventListener('click', () => {
-        // Get selected market group name
         const selectedGroup = marketGroupSelect.options[marketGroupSelect.selectedIndex]?.text || 'Unknown Group';
-    
         const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
             .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
-    
         if (!visibleItems.length) return;
-    
         const quickbarItems = visibleItems.map(li => {
             let [itemName, bracketData] = li.textContent.split('[');
             itemName = itemName.trim();
@@ -461,10 +475,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (joined.length > 25) joined = joined.slice(0, 25);
             return `- ${itemName} [${joined}]`;
         });
-    
-        // Add the group at the top
         const quickbar = `+ ${selectedGroup}\n${quickbarItems.join('\n')}`;
-    
         navigator.clipboard.writeText(quickbar).then(() => {
             copyMarketQuickbarBtn.innerHTML = '<span class="btn-text">Copied!</span>';
             setTimeout(() => {
@@ -480,26 +491,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const conn = parseFloat(document.getElementById('skill_connections')?.value || 0);
         const diplo = parseFloat(document.getElementById('skill_diplomacy')?.value || 0);
         const scrap = parseFloat(document.getElementById('skill_scrapmetal')?.value || 0);
-    
-        // Clamp base standings to -10.00 to +10.00
+
         let baseFaction = parseFloat(factionInput?.value || 0);
         let baseCorp = parseFloat(corpInput?.value || 0);
         const clampStanding = v => Math.max(-10, Math.min(10, v));
         baseFaction = clampStanding(baseFaction);
         baseCorp = clampStanding(baseCorp);
-    
-        // Calculate effective standings (pre-clamp)
+
         let factionEff = baseFaction < 0
             ? baseFaction + ((10 - baseFaction) * 0.04 * diplo)
             : baseFaction + ((10 - baseFaction) * 0.04 * conn);
         let corpEff = baseCorp < 0
             ? baseCorp + ((10 - baseCorp) * 0.04 * diplo)
             : baseCorp + ((10 - baseCorp) * 0.04 * conn);
-    
-        // Clamp effective standings too
+
         const factionEffClamped = clampStanding(factionEff);
         const corpEffClamped = clampStanding(corpEff);
-    
+
         const brokerFee = Math.max(0, 3 - (0.3 * broker) - (0.03 * baseFaction) - (0.02 * baseCorp));
         const reprocessTax = corpEffClamped <= 0
             ? 5.0
@@ -508,14 +516,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : 0;
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
-    
+
         factionResult.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
         corpResult.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
         brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
         taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
         salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
         yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
-    
+
         resultSkillsBox.style.display = 'block';
         resultSkillsBox.innerHTML = `
             <div><strong>Skill Used (Faction)</strong><br><i>${baseFaction < 0 ? 'Diplomacy' : 'Connections'}</i></div>
@@ -537,7 +545,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     hideAllResultsBelowGenerateList();
     resetGeneratePricesBtn();
 
-    // Standing input clamping
     function clampStandingInput(input) {
         input.addEventListener('blur', () => {
             let v = parseFloat(input.value);
@@ -549,5 +556,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (factionInput) clampStandingInput(factionInput);
     if (corpInput) clampStandingInput(corpInput);
+    
     generateBtn.addEventListener('click', updateMarketGroupResults);
 });
