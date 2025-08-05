@@ -63,7 +63,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function hasValidMetaGroup(typeID) {
         const entry = metaTypes[typeID];
-        return entry === 1 || entry === 2;
+        const includeT2 = document.getElementById('include_t2')?.value || "no";
+        if (includeT2 === "yes") {
+            return entry === 1 || entry === 2;
+        } else {
+            return entry === 1;
+        }
     }
 
     // Hide all result-dependent UI
@@ -284,7 +289,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('skill_criminal'),
             document.getElementById('skill_diplomacy'),
             document.getElementById('skill_scrapmetal'),
-            marketGroupSelect
+            marketGroupSelect,
+            document.getElementById('include_t2') // <--- add this line
         ].forEach(el => {
             el.addEventListener('input', () => {
                 hideGeneratedResults();
