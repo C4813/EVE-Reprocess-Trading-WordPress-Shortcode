@@ -172,15 +172,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const itemName = li.dataset.name;
                 const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-
+            
                 let total = 0;
                 components.forEach(({ mineralName, qty }) => {
                     const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                     total += qty * price;
                 });
-
+            
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)}]`;
+            
+                // Hide if not profitable
+                if (itemBuyPrice > total) {
+                    li.style.display = 'none';
+                } else {
+                    li.style.display = 'list-item';
+                }
             });
 
             generatePricesBtn.disabled = false;
