@@ -157,20 +157,53 @@ button .btn-text {
     to { transform: rotate(360deg); }
 }
 
-#market_group_results_wrapper {
-    display: none;
-    margin-top: 20px;
-    max-width: 900px;
+/* After-generate controls (secondary/sell-to) */
+#after_generate_controls {
+    margin: 0 auto;
+    margin-top: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+#after_generate_controls label {
+    font-weight: bold;
+    margin: 0 0 4px 0;
+    width: 100%;
+    text-align: center;
+    display: block;
+}
+
+#after_generate_controls select.eve-input {
+    margin-bottom: 12px;
+    margin-top: 0;
+}
+
+/* Market Group Filter below skills */
+#market_group_filter {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* Ensure material/item lists, price table, and wrapper are centered */
+#market_group_results_wrapper,
+#market_group_results,
+#material_list_flat {
     margin-left: auto;
     margin-right: auto;
     text-align: left;
+    max-width: 900px;
 }
 
 #market_group_results {
     list-style-type: disc;
     margin: 10px auto;
     padding-left: 20px;
-    max-width: 900px;
     font-size: 14px;
 }
 
@@ -179,11 +212,7 @@ button .btn-text {
 }
 
 #secondary_toggle_wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-top: 20px;
+    display: none;
 }
 
 #material_list_flat {
