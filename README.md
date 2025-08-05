@@ -25,7 +25,7 @@ This plugin is designed to replace and enhance my current [EVE Reprocessing Mast
 
 ## To-Do List
 
-- [ ] Margin filter (set minimum/maximum margin)
+- [x] Margin filter (set minimum/maximum margin)
 - [ ] Additional market groups for selection (e.g. some implants are profitable for reprocess trading, but there is currently no way to select them)
 - [ ] Enable/Disable T2 modules (Faction/Deadspace/Officer/Abyssal modules are disabled by default. These modules are not profitable for large-scale reprocess trading and are therefore irrelevant.)
 - [ ] Reprocessing tax consideration (currently does **NOT** factor into prices)
