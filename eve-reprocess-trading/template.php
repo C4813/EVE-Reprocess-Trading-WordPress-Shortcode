@@ -118,6 +118,11 @@
                 Minimum Daily Volume
                 <input type="number" id="min_daily_volume" class="eve-input" min="1" value="1" step="1" />
             </label>
+            <label class="eve-input-label">
+                Stack Size
+                <input type="number" id="stack_size" class="eve-input" min="1" value="1" step="1" />
+            </label>
+
         </div>
         <!-- Action Buttons -->
         <div id="market_action_buttons">
