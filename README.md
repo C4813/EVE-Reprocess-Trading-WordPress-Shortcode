@@ -47,4 +47,4 @@ The item price value will be omitted from the data copied to the clipboard. This
 - [ ] Code cleanup and optimization
 
 ## Post-release
-- [ ] Investiagate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
+- [ ] Investigate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
