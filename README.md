@@ -38,7 +38,7 @@ The item price value will be omitted from the data copied to the clipboard. This
 `Medium Armor Maintenance Bot I [36195|281|19.81%]`
 
 ## To-Do List
-- [ ] Add market volume filters (there's no point putting a buy order up for something that only sells 1 or 2 units per day)
+- [x] Add market volume filters (there's no point putting a buy order up for something that only sells 1 or 2 units per day)
   - [ ] Add optional buy order QTY suggestion (a set % of total regional daily volume)
 - [ ] Possibly relist fee consideration - I would need to think about how this would be handled, maybe with a "update x times per day" to calculate the brokerage fee for updating
 - [ ] Differentiation between T1 and Meta modules. (Meta modules i.e. `Pitfall Compact Warp Disruption Field Generator` have a meta level of 1, but so do T1 modules i.e. `Warp Disruption Fild Generator I`. I need to find a way to tell the difference from the SDE, but I do not think it is possible. I might have to MacGyver a solution.
