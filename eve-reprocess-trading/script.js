@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showAfterGenerateControls() {
         afterGenerateControls.style.display = 'block';
         generatePricesBtn.style.display = 'inline-block';
+        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
     }
 
     function updateMarketGroupResults() {
@@ -271,19 +272,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const components = JSON.parse(li.dataset.components || '[]');
             const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
 
-            // --- UPDATED: Calculate adjusted value and tax ---
+            // Calculate adjusted value and tax
             let total = 0;
             let adjustedValue = 0;
             components.forEach(({ mineralName, qty }) => {
                 const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
                 total += qty * price;
-                // Find typeID for adjusted price lookup
                 const typeID = invTypes[mineralName]?.typeID;
                 if (typeID && adjustedPricesByTypeID[typeID]) {
                     adjustedValue += qty * adjustedPricesByTypeID[typeID];
                 }
             });
-            // Get reprocessing tax percent from UI
             const reprocessTaxText = taxOutput.textContent || "0%";
             const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
             const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
@@ -293,15 +292,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const netTotal = total - taxAmount;
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
-            
+
             // Calculate margin using full precision netTotal
             let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
             margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-            
+
             // Format values for display
             const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
             const formattedNet = Math.floor(netTotal).toString();
-            
+
             li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
 
             // Margin filter
@@ -315,9 +314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             ) {
                 li.style.display = 'none';
             } else {
-                const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
-                const formattedNet = Math.floor(netTotal).toString();
-                li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
                 li.style.display = 'list-item';
                 anyVisible = true;
             }
@@ -414,14 +410,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const conn = parseFloat(document.getElementById('skill_connections')?.value || 0);
         const diplo = parseFloat(document.getElementById('skill_diplomacy')?.value || 0);
         const scrap = parseFloat(document.getElementById('skill_scrapmetal')?.value || 0);
-    
+
         // Clamp base standings to -10.00 to +10.00
         let baseFaction = parseFloat(factionInput?.value || 0);
         let baseCorp = parseFloat(corpInput?.value || 0);
         const clampStanding = v => Math.max(-10, Math.min(10, v));
         baseFaction = clampStanding(baseFaction);
         baseCorp = clampStanding(baseCorp);
-    
+
         // Calculate effective standings (pre-clamp)
         let factionEff = baseFaction < 0
             ? baseFaction + ((10 - baseFaction) * 0.04 * diplo)
@@ -429,11 +425,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         let corpEff = baseCorp < 0
             ? baseCorp + ((10 - baseCorp) * 0.04 * diplo)
             : baseCorp + ((10 - baseCorp) * 0.04 * conn);
-    
+
         // Clamp effective standings too
         const factionEffClamped = clampStanding(factionEff);
         const corpEffClamped = clampStanding(corpEff);
-    
+
         const brokerFee = Math.max(0, 3 - (0.3 * broker) - (0.03 * baseFaction) - (0.02 * baseCorp));
         const reprocessTax = corpEffClamped <= 0
             ? 5.0
@@ -442,14 +438,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 : 0;
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
-    
+
         factionResult.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
         corpResult.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
         brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
         taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
         salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
         yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
-    
+
         resultSkillsBox.style.display = 'block';
         resultSkillsBox.innerHTML = `
             <div><strong>Skill Used (Faction)</strong><br><i>${baseFaction < 0 ? 'Diplomacy' : 'Connections'}</i></div>
