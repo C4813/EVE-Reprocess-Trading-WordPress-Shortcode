@@ -4,32 +4,41 @@ Adds a shortcode `[eve_reprocess_trading]` to display a tool for calculating rep
 
 A secondary shortcode `[eve_reprocess_clear_cache]` can be used to display a button which forcibly clears the cache. It will be visible only to administrators (with WordPress `manage_options` capability).
 
-### ⚠️ Early development stage – full functionality has not been added yet! ⚠️
-
 This plugin is designed to replace and enhance my current [EVE Reprocessing Master 2.0.1 spreadsheet](https://docs.google.com/spreadsheets/d/13WKDTn-dqjOnJ2HG1KWYh4hZ8Pxv87vWsUtC65It5Mw/edit?usp=sharing) 🔗
 
-## Version 0.5.3 Features
+## Version 0.6.0 Features
 
 - [x] Trade Hub selection
   - [x] Secondary Trade Hub consideration (Perimeter/Ashab/Frarn/Nakugard/Botane)
-- [x] Skill and standing consideration (for sales tax and brokerage fees)
+- [x] Skill and standing consideration (for sales tax, brokerage, and reprocessing fees)
 - [x] Sell to buy orders, or sell orders options
 - [x] Price generation up to 9× faster than previous versions
+- [x] Margin filter (set minimum/maximum margin)
+- [x] Enable/Disable meta level 2 items (T2 modules/ships etc.)
 
-### How to read 0.5.3 results:
+### Caches refresh with updated prices independently:
+- Adjusted price data if the cache is greater than 24 hours old
+- Price data if the cache is greater than 6 hours old
+
+### How to read 0.6.0 results:
 `Item Name [Item Buy Price / Item Reprocessed Value / Regional Volume / Margin%]`
 
-- **Item Reprocessed Value** = The value of the reprocessed materials from reprocessing 1 item, and selling them to your selected market, at your selected price, minus relevant taxes/fees (e.g. Jita, Sell Orders).
+- **Item Reprocessed Value** = The value of the reprocessed materials from reprocessing 1 item, and selling them to your selected market, at your selected price, minus relevant taxes/fees (e.g. Buying from Jita, Selling to Sell Orders, minus brokerage fee, sales tax, and reprocessing tax if applicable).
 - **Regional Volume** = The number of transactions for this item in the past 24 hours in this region. This helps when deciding QTY for buy orders.
 
 #### Example:
-`Bantam [118000.00 / 145043.72 / 96 / 22.92%]`
+`Medium Armor Maintenance Bot I [30210 / 36195 / 281 / 19.81%]`
+
+### Copy to market quickbar
+The item price value will be omitted from the data copied to the clipboard. This is because you can only have 25 characters as a "note" on an item in the quickbar.
+
+#### Example in-game quickbar:
+`Medium Armor Maintenance Bot I [36195|281|19.81%]`
 
 ## To-Do List
-
-- [x] Margin filter (set minimum/maximum margin) (0.5.4)
-- [x] Additional market groups for selection (e.g. some implants are profitable for reprocess trading, but there is currently no way to select them) (0.5.6)
-- [x] Enable/Disable T2 modules (Faction/Deadspace/Officer/Abyssal modules are disabled by default. These modules are not profitable for large-scale reprocess trading and are therefore irrelevant.) (0.5.5)
-- [x] Reprocessing tax consideration (currently does **NOT** factor into prices) (0.5.7)
-- [ ] "Copy Results" button for easy market quickbar import
+- [ ] Add market volume filters (there's no point putting a buy order up for something that only sells 1 or 2 units per day)
+  - [ ] Add optional buy order QTY suggestion (a set % of total regional daily volume)
+- [ ] Possibly relist fee consideration - I would need to think about how this would be handled, maybe with a "update x times per day" to calculate the brokerage fee for updating
+- [ ] Differentiation between T1 and Meta modules. (Meta modules i.e. `Pitfall Compact Warp Disruption Field Generator` have a meta level of 1, but so do T1 modules i.e. `Warp Disruption Fild Generator I`. I need to find a way to tell the difference from the SDE, but I do not think it is possible. I might have to MacGyver a solution.
+- [ ] Reprocessing stack size. Many modules, if reprocessed individually, lose valuable minerals. If reprocessed in batches, for example, of 100, those minerals are yielded (you can't 5% 5, but you can 5% 100). The plugin currently ignores these <1 results, so an option to include a stack size will help refine the results to display a far more accurate representation of the items value.
 - [ ] Code cleanup and optimization
