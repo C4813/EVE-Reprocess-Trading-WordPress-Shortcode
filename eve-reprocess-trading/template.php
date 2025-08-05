@@ -86,7 +86,7 @@
         <span class="btn-text">Generate List</span>
     </button><br>
 
-    <!-- Controls to show only after list is generated, including BOTH buttons -->
+    <!-- Controls shown after list generation -->
     <div id="after_generate_controls" style="display:none; text-align: center; margin-top: 24px;">
         <!-- Secondary Trade Hubs option -->
         <div style="margin-bottom: 15px;">
@@ -104,7 +104,7 @@
                 <option value="sell" selected>Sell Orders</option>
             </select>
         </div>
-        <!-- Margin Filter Inputs -->
+        <!-- Margin Filter Inputs & Volume -->
         <div id="margin_fields_wrapper" style="margin: 20px 0 0 0; display: none;">
             <label class="eve-input-label">
                 Minimum Margin %
@@ -114,8 +114,12 @@
                 Maximum Margin %
                 <input type="number" id="max_margin" class="eve-input" min="0" value="25" step="0.01" />
             </label>
+            <label class="eve-input-label">
+                Minimum Daily Volume
+                <input type="number" id="min_daily_volume" class="eve-input" min="1" value="1" step="1" />
+            </label>
         </div>
-        <!-- Action Buttons: Always stacked vertically -->
+        <!-- Action Buttons -->
         <div id="market_action_buttons">
             <button id="generate_prices_btn" style="display:none;">
                 <span class="btn-text">Generate Prices</span>
