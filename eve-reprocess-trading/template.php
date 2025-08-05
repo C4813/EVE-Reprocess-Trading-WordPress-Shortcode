@@ -70,7 +70,7 @@
         </label>
     </div>
 
-    <!-- Include T2 Modules? Toggle -->
+    <!-- Include T2? Toggle -->
     <div id="t2_toggle_wrapper" style="margin:18px 0 12px 0;">
         <label>
             Include T2?
@@ -86,7 +86,7 @@
         <span class="btn-text">Generate List</span>
     </button><br>
 
-    <!-- Controls to show only after list is generated -->
+    <!-- Controls to show only after list is generated, including BOTH buttons -->
     <div id="after_generate_controls" style="display:none; text-align: center; margin-top: 24px;">
         <!-- Secondary Trade Hubs option -->
         <div style="margin-bottom: 15px;">
@@ -104,24 +104,27 @@
                 <option value="sell" selected>Sell Orders</option>
             </select>
         </div>
+        <!-- Margin Filter Inputs -->
+        <div id="margin_fields_wrapper" style="margin: 20px 0 0 0; display: none;">
+            <label class="eve-input-label">
+                Minimum Margin %
+                <input type="number" id="min_margin" class="eve-input" min="0" value="5" step="0.01" />
+            </label>
+            <label class="eve-input-label">
+                Maximum Margin %
+                <input type="number" id="max_margin" class="eve-input" min="0" value="25" step="0.01" />
+            </label>
+        </div>
+        <!-- Action Buttons: Always stacked vertically -->
+        <div id="market_action_buttons">
+            <button id="generate_prices_btn" style="display:none;">
+                <span class="btn-text">Generate Prices</span>
+            </button>
+            <button id="copy_market_quickbar_btn" style="display:none;">
+                <span class="btn-text">Copy Market Quickbar</span>
+            </button>
+        </div>
     </div>
-
-    <!-- Margin Filter Inputs -->
-    <div id="margin_fields_wrapper" style="margin: 20px 0 0 0; display: none;">
-        <label class="eve-input-label">
-            Minimum Margin %:
-            <input type="number" id="min_margin" class="eve-input" min="0" value="5" step="0.01" />
-        </label>
-        <label class="eve-input-label">
-            Maximum Margin %:
-            <input type="number" id="max_margin" class="eve-input" min="0" value="25" step="0.01" />
-        </label>
-    </div>
-
-    <!-- Prices Button -->
-    <button id="generate_prices_btn" style="display:none;">
-        <span class="btn-text">Generate Prices</span>
-    </button>
 
     <!-- Price Table -->
     <div id="price_table_wrapper" style="display:none;">
