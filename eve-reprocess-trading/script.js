@@ -1,9 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // Elements
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
     const includeSecondarySelect = document.getElementById('include_secondary');
     const sellToSelect = document.getElementById('sell_to_select');
+    const afterGenerateControls = document.getElementById('after_generate_controls');
     const tableWrapper = document.getElementById('price_table_wrapper');
     const outputTable = document.getElementById('output_price_table');
     const outputTableBody = outputTable.querySelector('tbody');
@@ -23,7 +25,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const taxOutput = document.getElementById('reprocess_tax');
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
+    const marketGroupSelect = document.getElementById('market_group_select');
 
+    // Data vars
     let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
 
     const hubToFactionCorp = {
@@ -59,6 +63,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         return entry === 1 || entry === 2;
     }
 
+    // Hide all result-dependent UI
+    function hideGeneratedResults() {
+        marketGroupResultsWrapper.style.display = 'none';
+        generatePricesBtn.style.display = 'none';
+        afterGenerateControls.style.display = 'none';
+        tableWrapper.style.display = 'none';
+    }
+
+    function showAfterGenerateControls() {
+        afterGenerateControls.style.display = 'block';
+        generatePricesBtn.style.display = 'inline-block';
+    }
+
     function updateMarketGroupResults() {
         generateBtn.disabled = true;
         generateBtn.classList.add('loading');
@@ -66,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         requestAnimationFrame(() => {
             setTimeout(() => {
-                const selectedTopGroup = document.getElementById('market_group_select').value;
+                const selectedTopGroup = marketGroupSelect.value;
                 const yieldText = yieldOutput.textContent || "0%";
                 const yieldMatch = yieldText.match(/([\d.]+)%/);
                 const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
@@ -108,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     : materialList.map(name => `<li>${name}</li>`).join('');
 
                 marketGroupResultsWrapper.style.display = 'block';
-                generatePricesBtn.style.display = 'inline-block';
+                showAfterGenerateControls();
                 generateBtn.disabled = false;
                 generateBtn.classList.remove('loading');
                 generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
@@ -142,7 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Two-pass price fetch logic (both passes in parallel) ---
+    // --- Two-pass price fetch logic ---
     generatePricesBtn.addEventListener('click', async () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
@@ -158,15 +175,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             batches.push(itemNames.slice(i, i + batchSize));
         }
 
-        // First pass: get prices/volumes for items only, IN PARALLEL
-        const priceResults = await Promise.all(batches.map(fetchBatch));
+        // First pass: get prices/volumes for items only
+        const priceResults = [];
+        for (const batch of batches) {
+            priceResults.push(await fetchBatch(batch));
+            await new Promise(res => setTimeout(res, 400));
+        }
         const allBuy = {}, allSell = {}, allVolumes = {};
         priceResults.forEach(data => {
             Object.assign(allBuy, data.buy || {});
             Object.assign(allSell, data.sell || {});
             Object.assign(allVolumes, data.volumes || {});
         });
-
         // Filter out items with volume = 0
         const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
 
@@ -183,6 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (mineralEntry) materialsNeeded.add(mineralEntry[0]);
             });
         });
+        // Remove any items already in filteredItemNames from materialsNeeded
         filteredItemNames.forEach(n => materialsNeeded.delete(n));
         const allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
         const materialBatches = [];
@@ -190,8 +211,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             materialBatches.push(allNames.slice(i, i + batchSize));
         }
 
-        // Get prices for filtered items + needed materials, IN PARALLEL
-        const finalPriceResults = await Promise.all(materialBatches.map(fetchBatch));
+        // Get prices for filtered items + needed materials
+        const finalPriceResults = [];
+        for (const batch of materialBatches) {
+            finalPriceResults.push(await fetchBatch(batch));
+            await new Promise(res => setTimeout(res, 400));
+        }
         const finalBuy = {}, finalSell = {}, finalVolumes = {};
         finalPriceResults.forEach(data => {
             Object.assign(finalBuy, data.buy || {});
@@ -233,9 +258,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
     });
 
-    generateBtn.addEventListener('click', updateMarketGroupResults);
-    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
+    // Hide results if *any* input EXCEPT secondary/sellto changes
+    function hideResultsOnRelevantInput() {
+        // Everything EXCEPT includeSecondary and sellTo
+        [
+            hubSelect,
+            factionInput, corpInput,
+            document.getElementById('skill_accounting'),
+            document.getElementById('skill_broker'),
+            document.getElementById('skill_connections'),
+            document.getElementById('skill_criminal'),
+            document.getElementById('skill_diplomacy'),
+            document.getElementById('skill_scrapmetal'),
+            marketGroupSelect
+        ].forEach(el => {
+            el.addEventListener('input', hideGeneratedResults);
+        });
+    }
+    hideResultsOnRelevantInput();
 
+    // Listeners
+    generateBtn.addEventListener('click', updateMarketGroupResults);
+
+    // Skills and result update on load and input
     function updateResults() {
         const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
         const broker = parseFloat(document.getElementById('skill_broker')?.value || 0);
@@ -274,5 +319,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         corpLabel.textContent = `Base ${data.corp} Standing`;
     });
 
+    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
+
+    // On load
     updateResults();
+    hideGeneratedResults();
 });
