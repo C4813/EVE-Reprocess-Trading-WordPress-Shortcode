@@ -33,17 +33,26 @@ $invTypes = json_decode(file_get_contents(__DIR__ . '/invTypes.json'), true);
 $map_file = __DIR__ . "/location_system_map.json";
 $system_map = file_exists($map_file) ? json_decode(file_get_contents($map_file), true) : [];
 
-$cache_file = __DIR__ . "/esi_cache_{$hub}_{$scope}.json";
-$cache_ttl = 21600; // 6 hours
+// === Chunked cache logic ===
+$cache_prefix = __DIR__ . "/esi_cache_{$hub}_{$scope}";
+$cache_ttl = 86400; // 24 hours
 
-// Load the existing cache if available and valid
-$cache = [];
-if (file_exists($cache_file) && (time() - filemtime($cache_file)) < $cache_ttl) {
-    $cache = json_decode(file_get_contents($cache_file), true) ?: [];
-    log_debug("Loaded from cache: $cache_file");
+// Load ALL cache chunks and merge
+$cache = ['buy'=>[],'sell'=>[],'volumes'=>[]];
+for ($chunk=1; $chunk<=99; $chunk++) {
+    $fname = "{$cache_prefix}_{$chunk}.json";
+    if (file_exists($fname) && (time() - filemtime($fname)) < $cache_ttl) {
+        $c = json_decode(file_get_contents($fname), true);
+        if (is_array($c)) {
+            foreach (['buy','sell','volumes'] as $k) {
+                if (!empty($c[$k])) $cache[$k] = array_merge($cache[$k], $c[$k]);
+            }
+        }
+    } else {
+        break;
+    }
 }
 
-// Set up output arrays with cached values where possible
 $buy = $cache['buy'] ?? [];
 $sell = $cache['sell'] ?? [];
 $volumes = $cache['volumes'] ?? [];
@@ -51,7 +60,6 @@ $volumes = $cache['volumes'] ?? [];
 // Which materials need to be fetched
 $toFetch = [];
 foreach ($requestedMaterials as $mat) {
-    // Only fetch if missing or value is 0 (could refine this: 0 could mean "no market", but safe for now)
     if (!isset($buy[$mat]) || !isset($sell[$mat]) || !isset($volumes[$mat]) || $buy[$mat] === 0 || $sell[$mat] === 0 || $volumes[$mat] === 0) {
         $toFetch[] = $mat;
         $buy[$mat] = 0;
@@ -60,7 +68,7 @@ foreach ($requestedMaterials as $mat) {
     }
 }
 
-// Updated system ID resolver for player structures
+// System resolver for player structures
 function resolve_system_id($locationID, &$map, $primary_system, $secondary_system, $scope) {
     if (isset($map[$locationID])) return $map[$locationID];
     if ($locationID >= 1000000000000) {
@@ -90,7 +98,7 @@ function fetch_orders_for_type($region_id, $typeID) {
         if (!is_array($batch) || empty($batch)) break;
         $orders = array_merge($orders, $batch);
         $page++;
-        usleep(200000); // 0.2s pause to avoid ESI errors
+        usleep(200000); // 0.2s pause
     } while (count($batch) === 1000);
     return $orders;
 }
@@ -161,10 +169,33 @@ foreach ($toFetch as $name) {
     }
 }
 
-// Save updates
+// Save updates for location map
 file_put_contents($map_file, json_encode($system_map));
-file_put_contents($cache_file, json_encode(['buy' => $buy, 'sell' => $sell, 'volumes' => $volumes]));
-log_debug("Updated and wrote cache file: $cache_file");
+
+// === Chunked cache save ===
+function save_cache_chunks($prefix, $cache, $limit = 150) {
+    foreach (['buy','sell','volumes'] as $k) {
+        if (!isset($cache[$k])) $cache[$k] = [];
+    }
+    $keys = array_keys($cache['buy'] + $cache['sell'] + $cache['volumes']);
+    $chunks = array_chunk($keys, $limit);
+    // Remove old
+    for ($i=1; $i<=99; $i++) {
+        $f = "{$prefix}_{$i}.json";
+        if (file_exists($f)) unlink($f);
+    }
+    // Write new ones
+    foreach ($chunks as $i => $set) {
+        $chunkArr = ['buy'=>[], 'sell'=>[], 'volumes'=>[]];
+        foreach ($set as $mat) {
+            if (isset($cache['buy'][$mat])) $chunkArr['buy'][$mat] = $cache['buy'][$mat];
+            if (isset($cache['sell'][$mat])) $chunkArr['sell'][$mat] = $cache['sell'][$mat];
+            if (isset($cache['volumes'][$mat])) $chunkArr['volumes'][$mat] = $cache['volumes'][$mat];
+        }
+        file_put_contents("{$prefix}_".($i+1).".json", json_encode($chunkArr));
+    }
+}
+save_cache_chunks($cache_prefix, ['buy'=>$buy,'sell'=>$sell,'volumes'=>$volumes], 150);
 
 // Output only what was requested
 $reply = ['buy' => [], 'sell' => [], 'volumes' => []];
