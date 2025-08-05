@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 hub: hubSelect.value,
-                includeSecondary: includeSecondarySelect.value === 'yes',
+                includeSecondary: includeSecondarySelect.value,
                 materials: batch
             })
         });
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Two-pass price fetch logic ---
+    // --- Two-pass price fetch logic (both passes in parallel) ---
     generatePricesBtn.addEventListener('click', async () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
@@ -158,18 +158,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             batches.push(itemNames.slice(i, i + batchSize));
         }
 
-        // First pass: get prices/volumes for items only
-        const priceResults = [];
-        for (const batch of batches) {
-            priceResults.push(await fetchBatch(batch));
-            await new Promise(res => setTimeout(res, 400));
-        }
+        // First pass: get prices/volumes for items only, IN PARALLEL
+        const priceResults = await Promise.all(batches.map(fetchBatch));
         const allBuy = {}, allSell = {}, allVolumes = {};
         priceResults.forEach(data => {
             Object.assign(allBuy, data.buy || {});
             Object.assign(allSell, data.sell || {});
             Object.assign(allVolumes, data.volumes || {});
         });
+
         // Filter out items with volume = 0
         const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
 
@@ -186,7 +183,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (mineralEntry) materialsNeeded.add(mineralEntry[0]);
             });
         });
-        // Remove any items already in filteredItemNames from materialsNeeded
         filteredItemNames.forEach(n => materialsNeeded.delete(n));
         const allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
         const materialBatches = [];
@@ -194,12 +190,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             materialBatches.push(allNames.slice(i, i + batchSize));
         }
 
-        // Get prices for filtered items + needed materials
-        const finalPriceResults = [];
-        for (const batch of materialBatches) {
-            finalPriceResults.push(await fetchBatch(batch));
-            await new Promise(res => setTimeout(res, 400));
-        }
+        // Get prices for filtered items + needed materials, IN PARALLEL
+        const finalPriceResults = await Promise.all(materialBatches.map(fetchBatch));
         const finalBuy = {}, finalSell = {}, finalVolumes = {};
         finalPriceResults.forEach(data => {
             Object.assign(finalBuy, data.buy || {});
@@ -219,11 +211,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             const components = JSON.parse(li.dataset.components || '[]');
             const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-
-            // Get brokerage and sales tax as numeric values
-            const brokerFee = parseFloat(document.getElementById('broker_fee').textContent) || 0;
-            const salesTax = parseFloat(document.getElementById('sales_tax').textContent) || 0;
-
             let total = 0;
             components.forEach(({ mineralName, qty }) => {
                 const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
@@ -231,20 +218,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
-
-            // Correct margin calculation: deduct fees from materials value ("proceeds")
-            let proceeds;
-            if (sellTo === 'sell') {
-                proceeds = total * (1 - brokerFee / 100) * (1 - salesTax / 100);
-            } else {
-                proceeds = total * (1 - salesTax / 100);
-            }
-            let margin = itemBuyPrice > 0 ? ((proceeds - itemBuyPrice) / itemBuyPrice) * 100 : 0;
+            let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
             margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-
             li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
-
-            if (itemBuyPrice === 0 || volume === 0 || margin < 0) {
+            if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0 || margin < 0) {
                 li.style.display = 'none';
             } else {
                 li.style.display = 'list-item';
