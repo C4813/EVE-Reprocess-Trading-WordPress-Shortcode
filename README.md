@@ -45,3 +45,6 @@ The item price value will be omitted from the data copied to the clipboard. This
 - [x] Reprocessing stack size. Many modules, if reprocessed individually, lose valuable minerals. If reprocessed in batches, for example, of 100, those minerals are yielded (you can't 5% 5, but you can 5% 100). The plugin currently ignores these <1 results, so an option to include a stack size will help refine the results to display a far more accurate representation of the items value.
 - [ ] Add "Exclude T1" to more groups than just Ship Equipment. (Need to think on this, as it would auto hide all ships. Maybe just have it show on all, but not on ships)
 - [ ] Code cleanup and optimization
+
+## Post-release
+- [ ] Investiagate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
