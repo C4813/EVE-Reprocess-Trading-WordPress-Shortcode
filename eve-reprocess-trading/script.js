@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
     const marketGroupSelect = document.getElementById('market_group_select');
+    const marginFieldsWrapper = document.getElementById('margin_fields_wrapper');
+    const minMarginInput = document.getElementById('min_margin');
+    const maxMarginInput = document.getElementById('max_margin');
 
     // Data vars
     let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
@@ -69,11 +72,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.style.display = 'none';
         afterGenerateControls.style.display = 'none';
         tableWrapper.style.display = 'none';
+        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
     }
 
     function showAfterGenerateControls() {
         afterGenerateControls.style.display = 'block';
         generatePricesBtn.style.display = 'inline-block';
+        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
     }
 
     function updateMarketGroupResults() {
@@ -165,6 +170,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
+        // Get margin values
+        let minMargin = parseFloat(minMarginInput.value) || 5;
+        let maxMargin = parseFloat(maxMarginInput.value) || 25;
+        if (minMargin < 0) minMargin = 0;
+        if (maxMargin < minMargin) maxMargin = minMargin;
+
+        minMarginInput.value = minMargin;
+        maxMarginInput.value = maxMargin;
+
         // Get item names only (ignore materials for now)
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
@@ -227,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentSellPrices = finalSell;
         currentVolumes = finalVolumes;
 
-        // Only show filtered items in the UI
+        // Only show filtered items in the UI, and filter by margin
         marketGroupResults.querySelectorAll('li').forEach(li => {
             const itemName = li.dataset.name;
             if (!filteredItemNames.includes(itemName)) {
@@ -244,9 +258,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
             const volume = currentVolumes[itemName] ?? 0;
             let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
-            margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
+            margin = isFinite(margin) ? parseFloat(margin.toFixed(2)) : 0;
             li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
-            if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0 || margin < 0) {
+            // Filter out invalid, 0-volume, or margin out-of-bounds
+            if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0 || margin < 0 || margin < minMargin || margin > maxMargin) {
                 li.style.display = 'none';
             } else {
                 li.style.display = 'list-item';
@@ -260,7 +275,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Hide results if *any* input EXCEPT secondary/sellto changes
     function hideResultsOnRelevantInput() {
-        // Everything EXCEPT includeSecondary and sellTo
         [
             hubSelect,
             factionInput, corpInput,
@@ -272,13 +286,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('skill_scrapmetal'),
             marketGroupSelect
         ].forEach(el => {
-            el.addEventListener('input', hideGeneratedResults);
+            el.addEventListener('input', () => {
+                hideGeneratedResults();
+                if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
+            });
         });
     }
     hideResultsOnRelevantInput();
 
+    // Hide margin fields initially
+    if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
+
     // Listeners
     generateBtn.addEventListener('click', updateMarketGroupResults);
+
+    // Enforce min values and defaults on margin fields
+    if (minMarginInput) {
+        minMarginInput.value = 5;
+        minMarginInput.min = 0;
+        minMarginInput.addEventListener('input', () => {
+            let v = parseFloat(minMarginInput.value) || 0;
+            if (v < 0) v = 0;
+            minMarginInput.value = v;
+            if (maxMarginInput && parseFloat(maxMarginInput.value) < v) maxMarginInput.value = v;
+        });
+    }
+    if (maxMarginInput) {
+        maxMarginInput.value = 25;
+        maxMarginInput.min = 0;
+        maxMarginInput.addEventListener('input', () => {
+            let v = parseFloat(maxMarginInput.value) || 0;
+            if (v < 0) v = 0;
+            maxMarginInput.value = v;
+        });
+    }
 
     // Skills and result update on load and input
     function updateResults() {
