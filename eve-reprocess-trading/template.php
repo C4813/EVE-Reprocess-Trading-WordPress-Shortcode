@@ -8,33 +8,8 @@
             <option value="rens">Rens</option>
             <option value="hek">Hek</option>
             <option value="dodixie">Dodixie</option>
-            <option value="private">Private Hub</option>
         </select>
     </label>
-
-    <!-- Custom Prices for Private Hub -->
-    <div id="custom_prices_wrapper" style="display:none; margin-top: 20px;">
-        <table class="eve-reprocess-table">
-            <thead>
-                <tr>
-                    <th>Mineral</th>
-                    <th>Custom Buy Price</th>
-                    <th>Custom Sell Price</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $minerals = ["Tritanium", "Pyerite", "Mexallon", "Isogen", "Nocxium", "Zydrine", "Megacyte", "Morphite"];
-                foreach ($minerals as $mineral): ?>
-                    <tr>
-                        <td><?= $mineral ?></td>
-                        <td><input type="number" step="0.01" class="eve-input custom-buy" data-mineral="<?= $mineral ?>" /></td>
-                        <td><input type="number" step="0.01" class="eve-input custom-sell" data-mineral="<?= $mineral ?>" /></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
 
     <!-- Secondary Hub Toggle -->
     <label id="secondary_toggle_wrapper">Include Secondary Trade Hubs?
@@ -95,15 +70,6 @@
                     <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.0" />
                 </label>
                 <div id="corp_standing_result" class="output">Effective: 0.00</div>
-            </div>
-
-            <!-- Private Brokerage Settings -->
-            <div id="custom_brokerage_wrapper" style="display:none;">
-                <label>Private Hub Brokerage Fee (%):</label>
-                <input id="custom_brokerage_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
-
-                <label style="margin-top: 15px;">Private Hub Reprocessing Tax (%):</label>
-                <input id="custom_tax_input" type="number" class="eve-input" step="0.01" min="0" max="100" value="0.00" />
             </div>
 
             <!-- Effective Skills -->
