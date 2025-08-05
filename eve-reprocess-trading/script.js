@@ -33,12 +33,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const maxMarginInput = document.getElementById('max_margin');
     const minDailyVolumeInput = document.getElementById('min_daily_volume');
     const stackSizeInput = document.getElementById('stack_size');
+    const excludeT1Select = document.getElementById('exclude_t1');
+    const excludeT1Wrapper = document.getElementById('exclude_t1_wrapper');
     const noResultsMessage = document.getElementById('no_results_message');
 
-    // Track if market list and prices are up to date with filter settings
+    generateBtn.addEventListener('click', updateMarketGroupResults);
+
+    // Initially hide minDailyVolume, stackSize inputs, and excludeT1 select
+    if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
+    if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
+    if (excludeT1Wrapper) excludeT1Wrapper.style.display = 'none';
+
+    // Flag to track if price filters require full regenerate
     let needRegenerateListAndPrices = false;
 
-    // Utility: Hide ALL results (market group, prices, filters, etc)
+    // Utility: Hide all results, buttons, and filters below Generate List button
     function hideAllResultsBelowGenerateList() {
         marketGroupResultsWrapper.style.display = 'none';
         generatePricesBtn.style.display = 'none';
@@ -47,11 +56,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         tableWrapper.style.display = 'none';
         if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
         if (noResultsMessage) noResultsMessage.style.display = 'none';
+        if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
+        if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
         resetGeneratePricesBtn();
         needRegenerateListAndPrices = false;
     }
 
-    // Utility: Hide ONLY the market group results, but keep filters and buttons
+    // Utility: Hide only market group results and price table, keep filters/buttons visible
     function hideMarketGroupResultsOnly() {
         marketGroupResultsWrapper.style.display = 'none';
         tableWrapper.style.display = 'none';
@@ -61,7 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         needRegenerateListAndPrices = true;
     }
 
-    // Resets the Generate Prices button to default
     function resetGeneratePricesBtn() {
         generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
         generatePricesBtn.disabled = false;
@@ -73,7 +83,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.classList.remove('loading');
     }
 
-    // --- Listeners for all "main filters" above Generate List button ---
+    // Show or hide Exclude T1 select only if Ship Equipment group selected
+    function updateExcludeT1Visibility() {
+        if (!excludeT1Select || !excludeT1Wrapper) return;
+        if (marketGroupSelect.value === "9") { // Ship Equipment
+            excludeT1Wrapper.style.display = 'block';
+        } else {
+            excludeT1Wrapper.style.display = 'none';
+            excludeT1Select.value = 'no'; // reset when hidden
+        }
+    }
+
+    marketGroupSelect.addEventListener('change', () => {
+        updateExcludeT1Visibility();
+        hideAllResultsBelowGenerateList();
+    });
+
+    // Hide minDailyVolume and stackSize on main filter changes, and also hide excludeT1 if needed
     [
         hubSelect,
         factionInput, corpInput,
@@ -84,14 +110,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('skill_diplomacy'),
         document.getElementById('skill_scrapmetal'),
         marketGroupSelect,
-        t2Toggle
+        t2Toggle,
+        excludeT1Select
     ].forEach(el => {
         if (el) {
-            el.addEventListener('input', hideAllResultsBelowGenerateList);
+            el.addEventListener('input', () => {
+                hideAllResultsBelowGenerateList();
+                if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
+                if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
+                updateExcludeT1Visibility();
+            });
         }
     });
 
-    // --- Listeners for all "price filters" below Generate List but above Generate Prices ---
+    // Price filter inputs trigger only hiding market results, not all filters
     [
         includeSecondarySelect,
         sellToSelect,
@@ -105,9 +137,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Data vars
+    // Data vars and constants
     let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
-
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
         amarr: { faction: "Amarr Empire", corp: "Emperor Family" },
@@ -120,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return fetch(url).then(r => r.json());
     }
 
-    // Load all data, including adjusted prices!
+    // Load data asynchronously
     let [invTypesRaw, marketGroupsRaw, reprocessYieldsRaw, metaTypesRaw, adjustedPricesArray] = await Promise.all([
         loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
@@ -133,7 +164,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     reprocessYields = reprocessYieldsRaw;
     metaTypes = metaTypesRaw;
 
-    // Map adjusted prices by typeID for fast lookup
     let adjustedPricesByTypeID = {};
     adjustedPricesArray.forEach(obj => {
         if (obj.type_id && typeof obj.adjusted_price === "number") {
@@ -160,6 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Generate market group results list
     function updateMarketGroupResults() {
         generateBtn.disabled = true;
         generateBtn.classList.add('loading');
@@ -178,31 +209,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Object.entries(invTypes)
                     .filter(([name, item]) => {
                         const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
-                        return topGroup === selectedTopGroup && hasValidMetaGroup(item.typeID);
+                        if (topGroup !== selectedTopGroup) return false;
+                        if (!hasValidMetaGroup(item.typeID)) return false;
+
+                        // Exclude T1 check if enabled and Ship Equipment selected
+                        if (excludeT1Select && excludeT1Select.value === 'yes' && selectedTopGroup === '9') {
+                            const blueprintName = name + ' Blueprint';
+                            if (invTypes.hasOwnProperty(blueprintName)) {
+                                return false;
+                            }
+                        }
+                        return true;
                     })
                     .forEach(([name, item]) => {
                         const typeID = item.typeID;
                         const yieldData = reprocessYields[typeID];
                         if (!yieldData) return;
 
-                        // For stack size, use default 1 if input missing or invalid
-                        let stackSize = 1;
-                        if (stackSizeInput) {
-                            let v = parseInt(stackSizeInput.value, 10);
-                            stackSize = (isNaN(v) || v < 1) ? 1 : v;
-                        }
-
                         const components = Object.entries(yieldData)
                             .map(([matID, qty]) => {
-                                // Multiply qty * stack size, then floor, then divide by stack size for per-item yield
-                                const rawTotal = qty * yieldPercent * stackSize;
-                                const flooredTotal = Math.floor(rawTotal);
-                                const perItem = flooredTotal / stackSize;
-                                if (perItem < 1 / stackSize) return null; // skip truly zero values for this stack
+                                const adjustedQty = Math.floor(qty * yieldPercent);
+                                if (adjustedQty < 1) return null;
                                 const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                                 const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
                                 materialSet.add(mineralName);
-                                return { mineralName, qty: perItem };
+                                return { mineralName, qty: adjustedQty };
                             })
                             .filter(Boolean);
 
@@ -225,8 +256,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 generateBtn.classList.remove('loading');
                 generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
 
-                // Show margin fields after list is generated
                 if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
+                if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'block';
+                if (stackSizeInput) stackSizeInput.parentElement.style.display = 'block';
 
                 resetGeneratePricesBtn();
                 needRegenerateListAndPrices = false;
@@ -313,6 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Object.assign(allSell, data.sell || {});
                 Object.assign(allVolumes, data.volumes || {});
             });
+
             const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
 
             const sellTo = sellToSelect?.value || 'buy';
@@ -356,25 +389,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     li.style.display = 'none';
                     return;
                 }
-                // Use stack size in calculations
-                let components = JSON.parse(li.dataset.components || '[]');
-                // Make sure each component is rounded DOWN to nearest whole number after multiplying by stackSize
-                components = components.map(comp => {
-                    // At this stage, comp.qty is already per-item, but was calculated with correct stackSize logic
-                    // If you want to display further per-item values (such as for price), use comp.qty directly
-                    return comp;
-                });
+                const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
 
                 let total = 0;
                 let adjustedValue = 0;
                 components.forEach(({ mineralName, qty }) => {
-                    // qty is already correct (per item, with stack logic/flooring applied)
+                    const adjustedQty = Math.floor(qty * stackSize);
+                    if (adjustedQty < 1) return;
                     const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
-                    total += qty * price;
+                    total += adjustedQty * price;
                     const typeID = invTypes[mineralName]?.typeID;
                     if (typeID && adjustedPricesByTypeID[typeID]) {
-                        adjustedValue += qty * adjustedPricesByTypeID[typeID];
+                        adjustedValue += adjustedQty * adjustedPricesByTypeID[typeID];
                     }
                 });
 
@@ -406,7 +433,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ) {
                     li.style.display = 'none';
                 } else {
-                    li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
                     li.style.display = 'list-item';
                     anyVisible = true;
                 }
@@ -426,7 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })();
     }
 
-    // --- Minimum Daily Volume Filter & Stack Size Input: input validation (auto-correct) ---
+    // Validation for minDailyVolumeInput and stackSizeInput
     if (minDailyVolumeInput) {
         minDailyVolumeInput.value = 1;
         minDailyVolumeInput.min = 1;
@@ -461,9 +487,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Copy Market Quickbar functionality
     copyMarketQuickbarBtn.addEventListener('click', () => {
         const selectedGroup = marketGroupSelect.options[marketGroupSelect.selectedIndex]?.text || 'Unknown Group';
+
         const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
             .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
+
         if (!visibleItems.length) return;
+
         const quickbarItems = visibleItems.map(li => {
             let [itemName, bracketData] = li.textContent.split('[');
             itemName = itemName.trim();
@@ -475,7 +504,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (joined.length > 25) joined = joined.slice(0, 25);
             return `- ${itemName} [${joined}]`;
         });
+
         const quickbar = `+ ${selectedGroup}\n${quickbarItems.join('\n')}`;
+
         navigator.clipboard.writeText(quickbar).then(() => {
             copyMarketQuickbarBtn.innerHTML = '<span class="btn-text">Copied!</span>';
             setTimeout(() => {
@@ -533,6 +564,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     hubSelect.addEventListener('change', () => {
         updateResults();
+        updateExcludeT1Visibility();
         const data = hubToFactionCorp[hubSelect.value] || { faction: "[Faction]", corp: "[Corporation]" };
         factionLabel.textContent = `Base ${data.faction} Standing`;
         corpLabel.textContent = `Base ${data.corp} Standing`;
@@ -540,11 +572,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
 
-    // On load
+    // Initial setup on page load
     updateResults();
     hideAllResultsBelowGenerateList();
+    updateExcludeT1Visibility();
     resetGeneratePricesBtn();
 
+    // Standing input clamping to range on blur
     function clampStandingInput(input) {
         input.addEventListener('blur', () => {
             let v = parseFloat(input.value);
@@ -556,6 +590,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (factionInput) clampStandingInput(factionInput);
     if (corpInput) clampStandingInput(corpInput);
-    
-    generateBtn.addEventListener('click', updateMarketGroupResults);
 });
