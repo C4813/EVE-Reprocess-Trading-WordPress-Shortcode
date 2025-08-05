@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const salesTaxOutput = document.getElementById('sales_tax');
     const yieldOutput = document.getElementById('reprocess_yield');
 
-    let invTypes = {}, marketGroups = {}, reprocessYields = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
+    let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
 
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
@@ -38,16 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return fetch(url).then(r => r.json());
     }
 
-    Promise.all([
+    [invTypes, marketGroups, reprocessYields, metaTypes] = await Promise.all([
         loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json')
-    ]).then(([types, groups, yields]) => {
-        invTypes = types;
-        marketGroups = groups;
-        reprocessYields = yields;
-        updateResults();
-    });
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json'),
+        loadJSON('/wp-content/plugins/eve-reprocess-trading/invMetaTypes.json')
+    ]);
 
     function getTopLevelGroup(marketGroupID) {
         let current = marketGroups[marketGroupID];
@@ -56,6 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
             current = marketGroups[marketGroupID];
         }
         return marketGroupID;
+    }
+
+    function hasValidMetaGroup(typeID) {
+        const entry = metaTypes[typeID];
+        return entry === 1 || entry === 2;
     }
 
     function updateMarketGroupResults() {
@@ -73,15 +74,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const materialSet = new Set();
                 const itemBreakdown = [];
 
-                const results = Object.entries(invTypes)
+                Object.entries(invTypes)
                     .filter(([name, item]) => {
                         const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
-                        return topGroup === selectedTopGroup;
+                        return topGroup === selectedTopGroup && hasValidMetaGroup(item.typeID);
                     })
-                    .map(([name, item]) => {
+                    .forEach(([name, item]) => {
                         const typeID = item.typeID;
                         const yieldData = reprocessYields[typeID];
-                        if (!yieldData) return name;
+                        if (!yieldData) return;
 
                         const components = Object.entries(yieldData)
                             .map(([matID, qty]) => {
@@ -95,14 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             .filter(Boolean);
 
                         itemBreakdown.push({ name, components });
-                        return name;
                     });
 
                 marketGroupResults.innerHTML = itemBreakdown.length === 0
                     ? `<li><em>No items found for this group</em></li>`
-                    : itemBreakdown.map(item => {
-                        return `<li data-name="${item.name}" data-components='${JSON.stringify(item.components)}'>${item.name}</li>`;
-                    }).join('');
+                    : itemBreakdown.map(item => `<li data-name="${item.name}" data-components='${JSON.stringify(item.components)}'>${item.name}</li>`).join('');
 
                 const materialList = Array.from(materialSet).sort();
                 materialListFlat.innerHTML = materialList.length === 0
@@ -118,90 +116,152 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    generatePricesBtn.addEventListener('click', () => {
+    // --- Parallel batch helper ---
+    async function fetchAllBatchesParallel(batches, maxConcurrency = 6, delay = 300) {
+        let results = [];
+        let idx = 0;
+        while (idx < batches.length) {
+            const chunk = batches.slice(idx, idx + maxConcurrency);
+            const chunkResults = await Promise.all(chunk.map(fetchBatch));
+            results = results.concat(chunkResults);
+            idx += maxConcurrency;
+            if (idx < batches.length && delay > 0) await new Promise(res => setTimeout(res, delay));
+        }
+        return results;
+    }
+
+    // --- Optimized fetchBatch ---
+    async function fetchBatch(batch, fetchMode = "full") {
+        // fetchMode: "full" = buy, sell, volumes; "price" = buy OR sell only (no volume)
+        const postData = {
+            hub: hubSelect.value,
+            includeSecondary: includeSecondarySelect.value === 'yes',
+            materials: batch
+        };
+        // Pass mode for backend if you want to optimize PHP as well
+        if (fetchMode !== "full") postData.fetchMode = fetchMode;
+        const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(postData)
+        });
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch {
+            return { buy: {}, sell: {}, volumes: {} };
+        }
+    }
+
+    // --- Two-pass optimized price fetching with parallelism ---
+    generatePricesBtn.addEventListener('click', async () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
-
-        const sellTo = sellToSelect?.value || 'buy';
-
-        const minerals = Array.from(materialListFlat.querySelectorAll('li'))
-            .map(li => li.textContent.trim())
-            .filter(name => name.length > 0 && !name.startsWith('No materials'));
 
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
             .filter(Boolean);
 
-        const allNames = Array.from(new Set([...minerals, ...itemNames]));
-        const batchSize = 20;
-        const batches = [];
-        for (let i = 0; i < allNames.length; i += batchSize) {
-            batches.push(allNames.slice(i, i + batchSize));
+        const batchSize = 30, maxConcurrency = 6, delay = 400;
+
+        // --- 1st pass: items only, get buy+sell+volume ---
+        const itemBatches = [];
+        for (let i = 0; i < itemNames.length; i += batchSize) {
+            itemBatches.push(itemNames.slice(i, i + batchSize));
+        }
+        const priceResults = await fetchAllBatchesParallel(itemBatches, maxConcurrency, delay);
+        const allBuy = {}, allSell = {}, allVolumes = {};
+        priceResults.forEach(data => {
+            Object.assign(allBuy, data.buy || {});
+            Object.assign(allSell, data.sell || {});
+            Object.assign(allVolumes, data.volumes || {});
+        });
+
+        // --- Filter: only items with volume > 0
+        const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
+
+        // --- 2nd pass: get ONLY necessary prices for filtered items and materials ---
+        const sellTo = sellToSelect?.value || 'buy';
+        let materialsNeeded = new Set();
+        filteredItemNames.forEach(itemName => {
+            const item = invTypes[itemName];
+            if (!item) return;
+            const yieldData = reprocessYields[item.typeID];
+            if (!yieldData) return;
+            Object.keys(yieldData).forEach(matID => {
+                const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
+                if (mineralEntry) materialsNeeded.add(mineralEntry[0]);
+            });
+        });
+        filteredItemNames.forEach(n => materialsNeeded.delete(n));
+        const materialNames = Array.from(materialsNeeded);
+
+        // --- Only fetch buy for items, buy/sell for materials depending on user ---
+        // Fetch items: always buy (don't need volume anymore)
+        const filteredBatches = [];
+        for (let i = 0; i < filteredItemNames.length; i += batchSize) {
+            filteredBatches.push(filteredItemNames.slice(i, i + batchSize));
+        }
+        // Fetch materials: buy OR sell as selected, NO volume
+        const materialBatches = [];
+        for (let i = 0; i < materialNames.length; i += batchSize) {
+            materialBatches.push(materialNames.slice(i, i + batchSize));
         }
 
-        const allBuy = {};
-        const allSell = {};
-        const allVolumes = {};
-
-        const fetchBatch = async (batch) => {
-            const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    hub: hubSelect.value,
-                    includeSecondary: includeSecondarySelect.value === 'yes',
-                    materials: batch
-                })
+        // Fetch filtered items (buy prices only)
+        const filteredItemResults = await fetchAllBatchesParallel(filteredBatches, maxConcurrency, delay);
+        const itemBuy = {};
+        filteredItemResults.forEach(data => Object.assign(itemBuy, data.buy || {}));
+        // Fetch materials (buy OR sell)
+        let materialPrice = {};
+        if (materialBatches.length > 0) {
+            const fetchMode = sellTo === "sell" ? "sell" : "buy";
+            const materialResults = await fetchAllBatchesParallel(materialBatches, maxConcurrency, delay);
+            materialResults.forEach(data => {
+                if (fetchMode === "sell") Object.assign(materialPrice, data.sell || {});
+                else Object.assign(materialPrice, data.buy || {});
             });
-            return await res.json();
-        };
+        }
 
-        Promise.all(batches.map(fetchBatch)).then(results => {
-            results.forEach(data => {
-                Object.assign(allBuy, data.buy || {});
-                Object.assign(allSell, data.sell || {});
-                Object.assign(allVolumes, data.volumes || {});
+        // --- Merge all results for display logic
+        currentMaterialPrices = itemBuy;
+        currentSellPrices = materialPrice;
+        currentVolumes = allVolumes;
+
+        // Update UI: only show filtered items
+        marketGroupResults.querySelectorAll('li').forEach(li => {
+            const itemName = li.dataset.name;
+            if (!filteredItemNames.includes(itemName)) {
+                li.style.display = 'none';
+                return;
+            }
+            const components = JSON.parse(li.dataset.components || '[]');
+            const priceSource = sellTo === 'sell' ? currentSellPrices : currentMaterialPrices;
+            let total = 0;
+            components.forEach(({ mineralName, qty }) => {
+                const price = priceSource[mineralName] ?? 0;
+                total += qty * price;
             });
-            currentMaterialPrices = allBuy;
-            currentSellPrices = allSell;
-            currentVolumes = allVolumes;
-
-            marketGroupResults.querySelectorAll('li').forEach(li => {
-                const itemName = li.dataset.name;
-                const components = JSON.parse(li.dataset.components || '[]');
-                const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-
-                let total = 0;
-                components.forEach(({ mineralName, qty }) => {
-                    const price = priceSource === 'sell' ? currentSellPrices[mineralName] ?? 0 : currentMaterialPrices[mineralName] ?? 0;
-                    total += qty * price;
-                });
-
-                const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
-                const volume = currentVolumes[itemName] ?? 0;
-                let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
-                margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-                
-                li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
-                
-                if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0) {
-                    li.style.display = 'none';
-                } else {
-                    li.style.display = 'list-item';
-                }
-            });
-
-            generatePricesBtn.disabled = false;
-            generatePricesBtn.classList.remove('loading');
-            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
-        }).catch(err => {
-            console.error("Fetch error:", err);
-            generatePricesBtn.disabled = false;
-            generatePricesBtn.classList.remove('loading');
-            generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+            const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
+            const volume = currentVolumes[itemName] ?? 0;
+            let margin = itemBuyPrice > 0 ? ((total - itemBuyPrice) / itemBuyPrice) * 100 : 0;
+            margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
+            li.textContent = `${itemName} [${itemBuyPrice.toFixed(2)} / ${total.toFixed(2)} / ${volume} / ${margin}%]`;
+            if (itemBuyPrice === 0 || itemBuyPrice > total || volume === 0) {
+                li.style.display = 'none';
+            } else {
+                li.style.display = 'list-item';
+            }
         });
+
+        generatePricesBtn.disabled = false;
+        generatePricesBtn.classList.remove('loading');
+        generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
     });
+
+    generateBtn.addEventListener('click', updateMarketGroupResults);
+    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
 
     function updateResults() {
         const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
@@ -222,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         factionResult.textContent = `Effective: ${factionEff.toFixed(2)}`;
         corpResult.textContent = `Effective: ${corpEff.toFixed(2)}`;
-
         brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
         taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
         salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
@@ -242,7 +301,5 @@ document.addEventListener('DOMContentLoaded', () => {
         corpLabel.textContent = `Base ${data.corp} Standing`;
     });
 
-    document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
-    generateBtn.addEventListener('click', updateMarketGroupResults);
     updateResults();
 });
