@@ -49,7 +49,6 @@ This changes the volume figure with x% (that you set) of that figure. This is to
 
 ## To-Do List
 - [ ] Investigate relist fee calculation. This may be making things too complicated, but I'm thinking it could be as simple as entering "Update orders x times per day" and then basing it on your Buy-Order QTY Recommendation.
-- [ ] Code optimization
 
 ## Post-release
 - [ ] Investigate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
