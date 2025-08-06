@@ -91,8 +91,8 @@
         <label>
             Include T2?
             <select id="include_t2" class="eve-input">
-                <option value="no" selected>No</option>
-                <option value="yes">Yes</option>
+                <option value="yes" selected>Yes</option>
+                <option value="no">No</option>
             </select>
         </label>
     </div>
@@ -143,7 +143,7 @@
         <div id="stack_size_wrapper">
             <label for="stack_size">
                 Stack Size
-                <input id="stack_size" type="number" min="1" step="1" value="1" class="eve-input" />
+                <input id="stack_size" type="number" min="1" step="1" value="100" class="eve-input" />
             </label>
         </div>
 
