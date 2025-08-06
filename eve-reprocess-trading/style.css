@@ -270,4 +270,13 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
   text-align: center;
 }
 
+#buy_qty_percentage_wrapper label,
+#buy_qty_percentage_wrapper input,
+#buy_qty_percentage_wrapper span {
+  vertical-align: middle;
+}
+#buy_qty_percentage_wrapper input.eve-input {
+  margin-right: 0.2em;
+}
+
 /* ===== END EVE Reprocess Style ===== */
