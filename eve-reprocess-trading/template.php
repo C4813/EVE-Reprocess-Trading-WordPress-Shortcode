@@ -154,7 +154,18 @@
                 <input id="stack_size" type="number" min="1" step="1" value="100" class="eve-input" />
             </label>
         </div>
-
+        <!-- QTY Recommendation -->
+        <div id="buy_qty_recommendation_wrapper" style="display:none;">
+          <label for="buy_qty_recommendation">Buy-order QTY recommendation?</label>
+          <select id="buy_qty_recommendation" class="eve-input">
+            <option value="no" slected>No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+        <div id="buy_qty_percentage_wrapper" style="display:none;">
+          <label for="buy_qty_percentage">% of Daily Volume</label>
+          <input id="buy_qty_percentage" type="number" min="0" max="100" step="1" value="10" class="eve-input">
+        </div>
         <!-- Action Buttons -->
         <div id="market_action_buttons">
             <button id="generate_prices_btn" style="display:none;" type="button" class="eve-btn">Generate Prices</button>
