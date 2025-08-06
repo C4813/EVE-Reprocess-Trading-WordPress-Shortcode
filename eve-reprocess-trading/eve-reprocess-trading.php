@@ -2,7 +2,7 @@
 /*
 Plugin Name: EVE Reprocess Trading
 Description: Displays trade hub mineral prices, brokerage and tax estimates based on skills and standings.
-Version: 0.6.5
+Version: 0.6.6
 Author: C4813
 */
 
@@ -35,17 +35,25 @@ function eve_reprocess_trading_shortcode() {
 
 add_shortcode('eve_reprocess_trading', 'eve_reprocess_trading_shortcode');
 
-// In your main plugin file (e.g., eve-reprocess-trading.php)
-
+// Enhanced cache clear logic:
 add_shortcode('eve_reprocess_clear_cache', function() {
     if (!current_user_can('manage_options')) return ''; // Only for admins
 
     $deleted = false;
     if (isset($_POST['eve_reprocess_clear_cache'])) {
-        // Find and delete all cache files
-        $pattern = plugin_dir_path(__FILE__) . 'esi_cache_*.json';
-        foreach (glob($pattern) as $filename) {
-            unlink($filename);
+        $cache_dir = plugin_dir_path(__FILE__) . 'cache/';
+        if (is_dir($cache_dir)) {
+            // Delete all ESI cache chunks
+            foreach (glob($cache_dir . 'esi_cache_*.json') as $filename) {
+                unlink($filename);
+            }
+            // Delete all adjusted price cache chunks
+            foreach (glob($cache_dir . 'adjusted_prices_*.json') as $filename) {
+                unlink($filename);
+            }
+            // Delete location_system_map.json
+            $mapfile = $cache_dir . 'location_system_map.json';
+            if (file_exists($mapfile)) unlink($mapfile);
         }
         $deleted = true;
     }
@@ -57,9 +65,8 @@ add_shortcode('eve_reprocess_clear_cache', function() {
         </button>
     </form>
     <?php if ($deleted): ?>
-        <div style="color:#27ae60; font-weight:bold;">ESI cache cleared!</div>
+        <div style="color:#27ae60; font-weight:bold;">All plugin caches cleared!</div>
     <?php endif; ?>
     <?php
     return ob_get_clean();
 });
-
