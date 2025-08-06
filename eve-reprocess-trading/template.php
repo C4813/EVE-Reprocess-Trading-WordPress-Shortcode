@@ -178,6 +178,6 @@
 
     <!-- No Results Message -->
     <div id="no_results_message" style="display:none; color:#c00; font-weight:bold;">
-        No profitable items within your filter parameters.
+        No profitable items within your filter parameters.<br />Try increasing stack size or widening margins.
     </div>
 </div>
