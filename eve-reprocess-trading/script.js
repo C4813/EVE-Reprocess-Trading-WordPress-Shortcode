@@ -211,6 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
                         if (topGroup !== selectedTopGroup) return false;
                         if (!hasValidMetaGroup(item.typeID)) return false;
+                        if (!item.published) return false;
 
                         // Exclude T1 check if enabled and Ship Equipment selected
                         if (excludeT1Select && excludeT1Select.value === 'yes' && selectedTopGroup === '9') {
