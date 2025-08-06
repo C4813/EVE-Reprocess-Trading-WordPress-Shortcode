@@ -1,249 +1,176 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Elements
-    const hubSelect = document.getElementById('hub_select');
-    const generateBtn = document.getElementById('generate_btn');
-    const generatePricesBtn = document.getElementById('generate_prices_btn');
-    const copyMarketQuickbarBtn = document.getElementById('copy_market_quickbar_btn');
-    const includeSecondarySelect = document.getElementById('include_secondary');
-    const sellToSelect = document.getElementById('sell_to_select');
-    const afterGenerateControls = document.getElementById('after_generate_controls');
-    const tableWrapper = document.getElementById('price_table_wrapper');
-    const outputTable = document.getElementById('output_price_table');
-    const outputTableBody = outputTable.querySelector('tbody');
-    const regionHeader = document.getElementById('region_volume_header');
-    const materialListFlat = document.getElementById('material_list_flat');
-    const marketGroupResults = document.getElementById('market_group_results');
-    const marketGroupResultsWrapper = document.getElementById('market_group_results_wrapper');
-    const standingInputsWrapper = document.getElementById('standing_inputs_wrapper');
-    const resultSkillsBox = document.getElementById('result_skills');
-    const factionLabel = document.getElementById('faction_label');
-    const corpLabel = document.getElementById('corp_label');
-    const factionInput = document.getElementById('faction_standing_input');
-    const corpInput = document.getElementById('corp_standing_input');
-    const factionResult = document.getElementById('faction_standing_result');
-    const corpResult = document.getElementById('corp_standing_result');
-    const brokerFeeOutput = document.getElementById('broker_fee');
-    const taxOutput = document.getElementById('reprocess_tax');
-    const salesTaxOutput = document.getElementById('sales_tax');
-    const yieldOutput = document.getElementById('reprocess_yield');
-    const marketGroupSelect = document.getElementById('market_group_select');
-    const t2Toggle = document.getElementById('include_t2');
-    const marginFieldsWrapper = document.getElementById('margin_fields_wrapper');
-    const minMarginInput = document.getElementById('min_margin');
-    const maxMarginInput = document.getElementById('max_margin');
-    const minDailyVolumeInput = document.getElementById('min_daily_volume');
-    const stackSizeInput = document.getElementById('stack_size');
-    const excludeT1Select = document.getElementById('exclude_t1');
-    const excludeT1Wrapper = document.getElementById('exclude_t1_wrapper');
-    const excludeCapitalSelect = document.getElementById('exclude_capital');
-    const excludeCapitalWrapper = document.getElementById('exclude_capital_wrapper');
-    const noResultsMessage = document.getElementById('no_results_message');
-    // ---- NEW ELEMENTS for Buy QTY logic ----
-    const buyQtyRecommendationWrapper = document.getElementById('buy_qty_recommendation_wrapper');
-    const buyQtyRecommendation = document.getElementById('buy_qty_recommendation');
-    const buyQtyPercentageWrapper = document.getElementById('buy_qty_percentage_wrapper');
-    const buyQtyPercentage = document.getElementById('buy_qty_percentage');
-    // ----------------------------------------
-    await fetch('/wp-content/plugins/eve-reprocess-trading/adjusted_prices.php?refresh=1');
+    // DOM shortcut
+    const $ = id => document.getElementById(id);
 
-    // XSS Escape
-    function escapeHTML(str) {
-        return String(str).replace(/[&<>"']/g, function(m) {
-            return ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            })[m];
-        });
-    }
+    // All key elements in one object for brevity
+    const els = {
+        hub: $('hub_select'), generate: $('generate_btn'), genPrices: $('generate_prices_btn'),
+        copyQuickbar: $('copy_market_quickbar_btn'), includeSec: $('include_secondary'), sellTo: $('sell_to_select'),
+        afterGen: $('after_generate_controls'), tableWrap: $('price_table_wrapper'), outTable: $('output_price_table'),
+        outTbody: $('output_price_table')?.querySelector('tbody'), regionHdr: $('region_volume_header'),
+        matList: $('material_list_flat'), groupResults: $('market_group_results'),
+        groupResultsWrap: $('market_group_results_wrapper'), standingWrap: $('standing_inputs_wrapper'),
+        skillsBox: $('result_skills'), factionLabel: $('faction_label'), corpLabel: $('corp_label'),
+        factionIn: $('faction_standing_input'), corpIn: $('corp_standing_input'),
+        factionRes: $('faction_standing_result'), corpRes: $('corp_standing_result'),
+        brokerFee: $('broker_fee'), tax: $('reprocess_tax'), salesTax: $('sales_tax'), yield: $('reprocess_yield'),
+        groupSel: $('market_group_select'), t2Toggle: $('include_t2'),
+        marginWrap: $('margin_fields_wrapper'), minMargin: $('min_margin'), maxMargin: $('max_margin'),
+        minVol: $('min_daily_volume'), stack: $('stack_size'), excludeT1: $('exclude_t1'),
+        excludeT1Wrap: $('exclude_t1_wrapper'), excludeCap: $('exclude_capital'),
+        excludeCapWrap: $('exclude_capital_wrapper'), noResults: $('no_results_message'),
+        buyQtyWrap: $('buy_qty_recommendation_wrapper'), buyQty: $('buy_qty_recommendation'),
+        buyQtyPercWrap: $('buy_qty_percentage_wrapper'), buyQtyPerc: $('buy_qty_percentage')
+    };
 
-    // Input sanitization function for number inputs
-    function sanitizeInput(input, options = {}) {
-        let v = parseFloat(input.value);
-        if (isNaN(v)) v = options.default ?? 0;
-        if (options.hasOwnProperty('min') && v < options.min) v = options.min;
-        if (options.hasOwnProperty('max') && v > options.max) v = options.max;
-        if (options.hasOwnProperty('step') && options.step > 0) {
-            v = Math.round(v / options.step) * options.step;
-        }
-        input.value = v;
-        return v;
-    }
+    // Show/hide helpers
+    const hide = (...x) => x.forEach(e => e && (e.style.display = 'none'));
+    const show = (...x) => x.forEach(e => e && (e.style.display = 'block'));
 
-    // Set defaults
-    if (stackSizeInput) stackSizeInput.value = 100;
-    if (t2Toggle) t2Toggle.value = "yes";
-
-    generateBtn.addEventListener('click', updateMarketGroupResults);
-
-    if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
-    if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
-    if (excludeT1Wrapper) excludeT1Wrapper.style.display = 'none';
-    if (excludeCapitalWrapper) excludeCapitalWrapper.style.display = 'none';
-    if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'none';
-    if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
-
-    let needRegenerateListAndPrices = false;
-
+    // --- Split hide logic for UI ---
     function hideAllResultsBelowGenerateList() {
-        marketGroupResultsWrapper.style.display = 'none';
-        generatePricesBtn.style.display = 'none';
-        copyMarketQuickbarBtn.style.display = 'none';
-        afterGenerateControls.style.display = 'none';
-        tableWrapper.style.display = 'none';
-        if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'none';
-        if (noResultsMessage) noResultsMessage.style.display = 'none';
-        if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
-        if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
-        if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'none';
-        if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
-        resetGeneratePricesBtn();
-        needRegenerateListAndPrices = false;
+        hide(
+            els.groupResultsWrap,
+            els.genPrices, els.copyQuickbar, els.afterGen,
+            els.tableWrap, els.marginWrap, els.noResults,
+            els.minVol?.parentElement, els.stack?.parentElement,
+            els.buyQtyWrap, els.buyQtyPercWrap
+        );
+        genPricesBtnReset && genPricesBtnReset();
+        needRegenerate = false;
     }
 
     function hideMarketGroupResultsOnly() {
-        marketGroupResultsWrapper.style.display = 'none';
-        tableWrapper.style.display = 'none';
-        copyMarketQuickbarBtn.style.display = 'none';
-        if (noResultsMessage) noResultsMessage.style.display = 'none';
-        setGeneratePricesBtnToRegenerate();
-        needRegenerateListAndPrices = true;
+        hide(
+            els.tableWrap, els.copyQuickbar, els.noResults
+        );
+        setGenPricesBtnRegenerate && setGenPricesBtnRegenerate();
+        needRegenerate = true;
     }
 
-    function resetGeneratePricesBtn() {
-        generatePricesBtn.innerHTML = `<span class="btn-text">Generate Prices</span>`;
-        generatePricesBtn.disabled = false;
-        generatePricesBtn.classList.remove('loading');
-    }
-    function setGeneratePricesBtnToRegenerate() {
-        generatePricesBtn.innerHTML = `<span class="btn-text">Regenerate List & Prices</span>`;
-        generatePricesBtn.disabled = false;
-        generatePricesBtn.classList.remove('loading');
-    }
-
-    function updateSpecialFiltersVisibility() {
-        if (excludeT1Select && excludeT1Wrapper) {
-            if (marketGroupSelect.value === "9") {
-                excludeT1Wrapper.style.display = 'block';
-            } else {
-                excludeT1Wrapper.style.display = 'none';
-                excludeT1Select.value = 'no';
-            }
-        }
-        const showCapital = ["4", "9", "955"].includes(marketGroupSelect.value);
-        if (excludeCapitalWrapper) {
-            excludeCapitalWrapper.style.display = showCapital ? 'block' : 'none';
-            if (!showCapital && excludeCapitalSelect) excludeCapitalSelect.value = "yes";
-        }
-    }
-
-    marketGroupSelect.addEventListener('change', () => {
-        updateSpecialFiltersVisibility();
-        hideAllResultsBelowGenerateList();
-    });
-
-    [
-        hubSelect,
-        factionInput, corpInput,
-        document.getElementById('skill_accounting'),
-        document.getElementById('skill_broker'),
-        document.getElementById('skill_connections'),
-        document.getElementById('skill_criminal'),
-        document.getElementById('skill_diplomacy'),
-        document.getElementById('skill_scrapmetal'),
-        marketGroupSelect,
-        t2Toggle,
-        excludeT1Select,
-        excludeCapitalSelect
-    ].forEach(el => {
-        if (el) {
-            el.addEventListener('input', () => {
-                hideAllResultsBelowGenerateList();
-                if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
-                if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
-                if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'none';
-                if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
-                updateSpecialFiltersVisibility();
-            });
-        }
-    });
-
-    [
-        includeSecondarySelect,
-        sellToSelect,
-        minMarginInput,
-        maxMarginInput,
-        minDailyVolumeInput,
-        stackSizeInput
-    ].forEach(el => {
-        if (el) {
-            el.addEventListener('input', hideMarketGroupResultsOnly);
-        }
-    });
-
-    let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
-    const hubToFactionCorp = {
-        jita: { faction: "Caldari State", corp: "Caldari Navy" },
-        amarr: { faction: "Amarr Empire", corp: "Emperor Family" },
-        rens: { faction: "Minmatar Republic", corp: "Brutor Tribe" },
-        hek: { faction: "Minmatar Republic", corp: "Boundless Creations" },
-        dodixie: { faction: "Gallente Federation", corp: "Federation Navy" },
+    // Utilities
+    const escapeHTML = str => String(str).replace(/[&<>"']/g, m =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+    );
+    const sanitize = (input, {min, max, step, def} = {}) => {
+        let v = parseFloat(input.value);
+        if (isNaN(v)) v = def ?? 0;
+        if (min !== undefined && v < min) v = min;
+        if (max !== undefined && v > max) v = max;
+        if (step) v = Math.round(v/step)*step;
+        input.value = v;
+        return v;
+    };
+    const clampInput = (el, min, max) => {
+        el && el.addEventListener('blur', () => {
+            let v = parseFloat(el.value);
+            el.value = isNaN(v) ? 0 : Math.max(min, Math.min(max, v)).toFixed(2);
+        });
     };
 
-    function loadJSON(url) {
-        return fetch(url).then(r => r.json());
-    }
+    // Set initial defaults
+    if (els.stack) els.stack.value = 100;
+    if (els.t2Toggle) els.t2Toggle.value = "yes";
+    hide(els.minVol?.parentElement, els.stack?.parentElement, els.excludeT1Wrap, els.excludeCapWrap, els.buyQtyWrap, els.buyQtyPercWrap);
 
-    async function loadAllAdjustedPricesFiles(basePath, prefix, limit = 200) {
-        let allData = [];
-        let index = 1;
-        while (true) {
-            const url = `${basePath}/${prefix}_${index}.json`;
-            try {
-                const data = await loadJSON(url);
-                if (!Array.isArray(data) || data.length === 0) break;
-                allData = allData.concat(data);
-                if (data.length < limit) break;
-                index++;
-            } catch (e) {
-                break;
-            }
-        }
-        return allData;
-    }
+    // Always refresh adjusted prices cache (if needed)
+    await fetch('/wp-content/plugins/eve-reprocess-trading/adjusted_prices.php');
 
-    let [
-        invTypesRaw,
-        marketGroupsRaw,
-        reprocessYieldsRaw,
-        metaTypesRaw
-    ] = await Promise.all([
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/invMetaTypes.json'),
+    // Data load
+    let [invTypes, marketGroups, reprocessYields, metaTypes] = await Promise.all([
+        fetch('/wp-content/plugins/eve-reprocess-trading/invTypes.json').then(r=>r.json()),
+        fetch('/wp-content/plugins/eve-reprocess-trading/marketGroups.json').then(r=>r.json()),
+        fetch('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json').then(r=>r.json()),
+        fetch('/wp-content/plugins/eve-reprocess-trading/invMetaTypes.json').then(r=>r.json()),
     ]);
-    
-    let adjustedPricesArray = await loadAllAdjustedPricesFiles(
-        '/wp-content/uploads/eve-reprocess-trading/cache',
-        'adjusted_prices',
-        200
-    );
-
-    invTypes = invTypesRaw;
-    marketGroups = marketGroupsRaw;
-    reprocessYields = reprocessYieldsRaw;
-    metaTypes = metaTypesRaw;
-
+    let adjustedPricesArray = await (async function() {
+        let arr = [], i = 1, limit = 200, basePath = '/wp-content/uploads/eve-reprocess-trading/cache';
+        while (true) {
+            try {
+                let data = await fetch(`${basePath}/adjusted_prices_${i}.json`).then(r=>r.json());
+                if (!Array.isArray(data) || !data.length) break;
+                arr = arr.concat(data);
+                if (data.length < limit) break;
+                i++;
+            } catch { break; }
+        }
+        return arr;
+    })();
     let adjustedPricesByTypeID = {};
     adjustedPricesArray.forEach(obj => {
-        if (obj.type_id && typeof obj.adjusted_price === "number") {
-            adjustedPricesByTypeID[obj.type_id] = obj.adjusted_price;
-        }
+        if (obj.type_id && typeof obj.adjusted_price === "number") adjustedPricesByTypeID[obj.type_id] = obj.adjusted_price;
     });
 
+    // Filters visibility logic
+    function updateFiltersVisibility() {
+        if (els.excludeT1 && els.excludeT1Wrap)
+            els.excludeT1Wrap.style.display = els.groupSel.value === "9" ? 'block' : 'none';
+        if (els.excludeCapWrap)
+            els.excludeCapWrap.style.display = ["4", "9", "955"].includes(els.groupSel.value) ? 'block' : 'none';
+    }
+
+    // Clamp standing inputs
+    clampInput(els.factionIn, -10, 10);
+    clampInput(els.corpIn, -10, 10);
+
+    // Event listeners for filters
+    [
+        els.hub, els.factionIn, els.corpIn, $('skill_accounting'), $('skill_broker'), $('skill_connections'),
+        $('skill_criminal'), $('skill_diplomacy'), $('skill_scrapmetal'),
+        els.groupSel, els.t2Toggle, els.excludeT1, els.excludeCap
+    ].forEach(el => el && el.addEventListener('input', () => {
+        hideAllResultsBelowGenerateList();
+        hide(els.minVol?.parentElement, els.stack?.parentElement, els.buyQtyWrap, els.buyQtyPercWrap);
+        updateFiltersVisibility();
+    }));
+
+    [
+        els.includeSec, els.sellTo, els.minMargin, els.maxMargin,
+        els.minVol, els.stack, els.buyQty, els.buyQtyPerc
+    ].forEach(el => el && el.addEventListener('input', hideMarketGroupResultsOnly));
+
+    // Buy QTY logic (also runs hideMarketGroupResultsOnly)
+    if (els.buyQty) els.buyQty.addEventListener('change', () => {
+        els.buyQtyPercWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
+        hideMarketGroupResultsOnly();
+    });
+    if (els.buyQtyPerc) {
+        ['input','blur'].forEach(evt => els.buyQtyPerc.addEventListener(evt, () => {
+            sanitize(els.buyQtyPerc, {min:0, max:100, def:10});
+            if (evt === 'input') hideMarketGroupResultsOnly();
+        }));
+    }
+
+    // Escape/Clamp number inputs
+    if (els.minVol) ['input','blur'].forEach(e=>els.minVol.addEventListener(e,()=>sanitize(els.minVol,{min:1,def:1})));
+    if (els.stack) ['input','blur'].forEach(e=>els.stack.addEventListener(e,()=>sanitize(els.stack,{min:1,def:100})));
+    if (els.minMargin) ['input','blur'].forEach(e=>els.minMargin.addEventListener(e,()=>sanitize(els.minMargin,{def:5})));
+    if (els.maxMargin) ['input','blur'].forEach(e=>els.maxMargin.addEventListener(e,()=>sanitize(els.maxMargin,{def:25})));
+
+    // UI buttons state
+    function genPricesBtnReset() {
+        els.genPrices.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+        els.genPrices.disabled = false;
+        els.genPrices.classList.remove('loading');
+    }
+    function setGenPricesBtnRegenerate() {
+        els.genPrices.innerHTML = `<span class="btn-text">Regenerate List & Prices</span>`;
+        els.genPrices.disabled = false;
+        els.genPrices.classList.remove('loading');
+    }
+
+    // Get current Buy QTY settings
+    function getBuyQtySettings() {
+        let enabled = false, percent = 0.10;
+        if (els.buyQty && els.buyQty.value === 'yes') {
+            enabled = true;
+            if (els.buyQtyPerc && !isNaN(parseFloat(els.buyQtyPerc.value)))
+                percent = Math.max(0, Math.min(100, parseFloat(els.buyQtyPerc.value))) / 100;
+        }
+        return { enabled, percent };
+    }
+
+    // Market group logic
     function getTopLevelGroup(marketGroupID) {
         let current = marketGroups[marketGroupID];
         while (current && current.parentGroupID !== "None") {
@@ -252,18 +179,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         return marketGroupID;
     }
-
     function hasValidMetaGroup(typeID) {
         const entry = metaTypes[typeID];
-        const includeT2 = t2Toggle?.value || "no";
-        if (typeof entry === "undefined" || entry === null) return true;
-        if (includeT2 === "yes") {
-            return entry === 1 || entry === 2;
-        } else {
-            return entry === 1;
-        }
+        const includeT2 = els.t2Toggle?.value || "no";
+        if (entry === undefined || entry === null) return true;
+        return includeT2 === "yes" ? (entry === 1 || entry === 2) : entry === 1;
     }
-
     function isCapitalItem(item) {
         if (!item || !item.marketGroupID) return false;
         let groupID = item.marketGroupID;
@@ -276,17 +197,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         return false;
     }
 
+    // Update Market Group Results
+    let needRegenerate = false;
+    els.generate.addEventListener('click', updateMarketGroupResults);
+
     function updateMarketGroupResults() {
-        generateBtn.disabled = true;
-        generateBtn.classList.add('loading');
-        generateBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">List Generating<br><small>This may take several seconds<br>Do not refresh the page</small></span>`;
+        els.generate.disabled = true;
+        els.generate.classList.add('loading');
+        els.generate.innerHTML = `<span class="spinner"></span><span class="btn-text">List Generating<br><small>This may take several seconds<br>Do not refresh the page</small></span>`;
 
         requestAnimationFrame(() => {
             setTimeout(() => {
-                const selectedTopGroup = marketGroupSelect.value;
-                const yieldText = yieldOutput.textContent || "0%";
-                const yieldMatch = yieldText.match(/([\d.]+)%/);
-                const yieldPercent = yieldMatch ? parseFloat(yieldMatch[1]) / 100 : 0;
+                const selectedTopGroup = els.groupSel.value;
+                const yieldText = els.yield.textContent || "0%";
+                const yieldPercent = (yieldText.match(/([\d.]+)%/) ? parseFloat(yieldText) : 0) / 100;
 
                 const materialSet = new Set();
                 const itemBreakdown = [];
@@ -297,15 +221,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (topGroup !== selectedTopGroup) return false;
                         if (!hasValidMetaGroup(item.typeID)) return false;
                         if (!item.published) return false;
-                        if (excludeT1Select && excludeT1Select.value === 'yes' && selectedTopGroup === '9') {
-                            const blueprintName = name + ' Blueprint';
-                            if (invTypes.hasOwnProperty(blueprintName)) {
-                                return false;
-                            }
+                        if (els.excludeT1 && els.excludeT1.value === 'yes' && selectedTopGroup === '9') {
+                            if (invTypes.hasOwnProperty(name + ' Blueprint')) return false;
                         }
-                        if (excludeCapitalSelect && excludeCapitalSelect.value === 'yes' && isCapitalItem(item)) {
-                            return false;
-                        }
+                        if (els.excludeCap && els.excludeCap.value === 'yes' && isCapitalItem(item)) return false;
                         return true;
                     })
                     .forEach(([name, item]) => {
@@ -321,156 +240,102 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
                                 materialSet.add(mineralName);
                                 return { mineralName, perItemQty };
-                            })
-                            .filter(c => c);
+                            }).filter(c => c);
                         itemBreakdown.push({ name, components });
                     });
 
-                // Clear the list first
-                marketGroupResults.innerHTML = '';
-                
-                if (itemBreakdown.length === 0) {
+                els.groupResults.innerHTML = '';
+                if (!itemBreakdown.length) {
                     const li = document.createElement('li');
-                    const em = document.createElement('em');
-                    em.textContent = 'No items found for this group';
-                    li.appendChild(em);
-                    marketGroupResults.appendChild(li);
+                    li.innerHTML = '<em>No items found for this group</em>';
+                    els.groupResults.appendChild(li);
                 } else {
                     itemBreakdown.forEach(item => {
                         const li = document.createElement('li');
                         li.setAttribute('data-name', item.name);
                         li.setAttribute('data-components', JSON.stringify(item.components));
                         li.textContent = item.name;
-                        marketGroupResults.appendChild(li);
+                        els.groupResults.appendChild(li);
                     });
                 }
-
                 const materialList = Array.from(materialSet).sort();
-                materialListFlat.innerHTML = '';
-                if (materialList.length === 0) {
+                els.matList.innerHTML = '';
+                if (!materialList.length) {
                     const li = document.createElement('li');
-                    const em = document.createElement('em');
-                    em.textContent = 'No materials found';
-                    li.appendChild(em);
-                    materialListFlat.appendChild(li);
+                    li.innerHTML = '<em>No materials found</em>';
+                    els.matList.appendChild(li);
                 } else {
                     materialList.forEach(name => {
                         const li = document.createElement('li');
                         li.textContent = name;
-                        materialListFlat.appendChild(li);
+                        els.matList.appendChild(li);
                     });
                 }
 
-                marketGroupResultsWrapper.style.display = 'block';
-                afterGenerateControls.style.display = 'block';
-                generatePricesBtn.style.display = 'inline-block';
-                generateBtn.disabled = false;
-                generateBtn.classList.remove('loading');
-                generateBtn.innerHTML = `<span class="btn-text">Generate List</span>`;
+                show(els.groupResultsWrap, els.afterGen, els.genPrices);
+                if (els.marginWrap) show(els.marginWrap);
+                if (els.minVol) show(els.minVol.parentElement);
+                if (els.stack) show(els.stack.parentElement);
+                if (els.buyQtyWrap) show(els.buyQtyWrap);
+                if (els.buyQty && els.buyQty.value === 'yes' && els.buyQtyPercWrap) show(els.buyQtyPercWrap);
 
-                if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
-                if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'block';
-                if (stackSizeInput) stackSizeInput.parentElement.style.display = 'block';
-                if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'block';
-                if (buyQtyRecommendation && buyQtyRecommendation.value === 'yes') {
-                    if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'block';
-                } else {
-                    if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
-                }
-                resetGeneratePricesBtn();
-                needRegenerateListAndPrices = false;
+                genPricesBtnReset();
+                needRegenerate = false;
+                els.generate.disabled = false;
+                els.generate.classList.remove('loading');
+                els.generate.innerHTML = `<span class="btn-text">Generate List</span>`;
             }, 10);
         });
     }
 
-    if (buyQtyRecommendation) {
-        buyQtyRecommendation.addEventListener('change', function () {
-            if (this.value === 'yes') {
-                if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'block';
-            } else {
-                if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
-            }
-            hideMarketGroupResultsOnly();
-        });
-    }
-    if (buyQtyPercentage) {
-        buyQtyPercentage.addEventListener('input', function () {
-            sanitizeInput(buyQtyPercentage, {min:0, max:100, default:10});
-            hideMarketGroupResultsOnly();
-        });
-        buyQtyPercentage.addEventListener('blur', function () {
-            sanitizeInput(buyQtyPercentage, {min:0, max:100, default:10});
-        });
-    }
+    // Generate Prices logic
+    let currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
+    els.genPrices.addEventListener('click', async () => {
+        if (needRegenerate) {
+            updateMarketGroupResults();
+            setTimeout(runGeneratePrices, 300);
+        } else runGeneratePrices();
+    });
 
     async function fetchBatch(batch) {
         const res = await fetch('/wp-content/plugins/eve-reprocess-trading/price_api.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                hub: hubSelect.value,
-                includeSecondary: includeSecondarySelect.value,
+                hub: els.hub.value,
+                includeSecondary: els.includeSec.value,
                 materials: batch
             })
         });
-        const text = await res.text();
-        try {
-            return JSON.parse(text);
-        } catch {
-            return { buy: {}, sell: {}, volumes: {} };
-        }
+        try { return await res.json(); }
+        catch { return { buy: {}, sell: {}, volumes: {} }; }
     }
 
     function maybeShowCopyMarketQuickbar() {
-        const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
+        const visibleItems = Array.from(els.groupResults.querySelectorAll('li'))
             .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
-        copyMarketQuickbarBtn.style.display = visibleItems.length ? 'inline-block' : 'none';
-    }
-
-    generatePricesBtn.addEventListener('click', async () => {
-        if (needRegenerateListAndPrices) {
-            updateMarketGroupResults();
-            setTimeout(() => {
-                runGeneratePrices();
-            }, 300);
-        } else {
-            runGeneratePrices();
-        }
-    });
-
-    function getBuyQtySettings() {
-        let enabled = false, percent = 0.10;
-        if (buyQtyRecommendation && buyQtyRecommendation.value === 'yes') {
-            enabled = true;
-            if (buyQtyPercentage && !isNaN(parseFloat(buyQtyPercentage.value))) {
-                percent = Math.max(0, Math.min(100, parseFloat(buyQtyPercentage.value))) / 100;
-            }
-        }
-        return { enabled, percent };
+        els.copyQuickbar.style.display = visibleItems.length ? 'inline-block' : 'none';
     }
 
     function runGeneratePrices() {
-        if (noResultsMessage) noResultsMessage.style.display = 'none';
-        generatePricesBtn.disabled = true;
-        generatePricesBtn.classList.add('loading');
-        generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
+        if (els.noResults) hide(els.noResults);
+        els.genPrices.disabled = true;
+        els.genPrices.classList.add('loading');
+        els.genPrices.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
 
-        let minMargin = minMarginInput ? sanitizeInput(minMarginInput, {default:5}) : 5;
-        let maxMargin = maxMarginInput ? sanitizeInput(maxMarginInput, {default:25}) : 25;
-
-        let minDailyVolume = minDailyVolumeInput ? sanitizeInput(minDailyVolumeInput, {min:1, default:1}) : 1;
-        let stackSize = stackSizeInput ? sanitizeInput(stackSizeInput, {min:1, default:100}) : 100;
-
+        let minMargin = els.minMargin ? sanitize(els.minMargin, {def:5}) : 5;
+        let maxMargin = els.maxMargin ? sanitize(els.maxMargin, {def:25}) : 25;
+        let minDailyVolume = els.minVol ? sanitize(els.minVol, {min:1,def:1}) : 1;
+        let stackSize = els.stack ? sanitize(els.stack, {min:1,def:100}) : 100;
         const { enabled: buyQtyEnabled, percent: buyQtyPercent } = getBuyQtySettings();
+        const sellTo = els.sellTo?.value || 'buy';
 
-        const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
-            .map(li => li.dataset.name)
-            .filter(Boolean);
+        const itemNames = Array.from(els.groupResults.querySelectorAll('li'))
+            .map(li => li.dataset.name).filter(Boolean);
         const batchSize = 30;
         const batches = [];
-        for (let i = 0; i < itemNames.length; i += batchSize) {
+        for (let i = 0; i < itemNames.length; i += batchSize)
             batches.push(itemNames.slice(i, i + batchSize));
-        }
 
         (async () => {
             const priceResults = [];
@@ -487,7 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
 
-            const sellTo = sellToSelect?.value || 'buy';
+            // Determine all required minerals
             let materialsNeeded = new Set();
             filteredItemNames.forEach(itemName => {
                 const item = invTypes[itemName];
@@ -502,9 +367,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             filteredItemNames.forEach(n => materialsNeeded.delete(n));
             const allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
             const materialBatches = [];
-            for (let i = 0; i < allNames.length; i += batchSize) {
+            for (let i = 0; i < allNames.length; i += batchSize)
                 materialBatches.push(allNames.slice(i, i + batchSize));
-            }
 
             const finalPriceResults = [];
             for (const batch of materialBatches) {
@@ -522,7 +386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentVolumes = finalVolumes;
 
             let anyVisible = false;
-            marketGroupResults.querySelectorAll('li').forEach(li => {
+            els.groupResults.querySelectorAll('li').forEach(li => {
                 const itemName = li.dataset.name;
                 if (!filteredItemNames.includes(itemName)) {
                     li.style.display = 'none';
@@ -531,8 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
 
-                let totalYieldValue = 0;
-                let adjustedValue = 0;
+                let totalYieldValue = 0, adjustedValue = 0;
                 components.forEach(({ mineralName, perItemQty }) => {
                     const totalQty = Math.floor(perItemQty * stackSize);
                     if (totalQty < 1) return;
@@ -540,15 +403,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? currentSellPrices[mineralName] ?? 0
                         : currentMaterialPrices[mineralName] ?? 0;
                     totalYieldValue += totalQty * price;
-
                     const typeID = invTypes[mineralName]?.typeID;
-                    if (typeID && adjustedPricesByTypeID[typeID]) {
+                    if (typeID && adjustedPricesByTypeID[typeID])
                         adjustedValue += totalQty * adjustedPricesByTypeID[typeID];
-                    }
                 });
 
                 const perItemYieldValue = stackSize > 0 ? totalYieldValue / stackSize : 0;
-                const reprocessTaxText = taxOutput.textContent || "0%";
+                const reprocessTaxText = els.tax.textContent || "0%";
                 const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
                 const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
                 const taxAmount = adjustedValue * reprocessTaxRate;
@@ -557,28 +418,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
 
-                const brokerFeeText = brokerFeeOutput.textContent || "0%";
+                const brokerFeeText = els.brokerFee.textContent || "0%";
                 const brokerFeeMatch = brokerFeeText.match(/([\d.]+)%/);
                 const brokerageFeeRate = brokerFeeMatch ? parseFloat(brokerFeeMatch[1]) / 100 : 0;
 
-                const salesTaxText = salesTaxOutput.textContent || "0%";
+                const salesTaxText = els.salesTax.textContent || "0%";
                 const salesTaxMatch = salesTaxText.match(/([\d.]+)%/);
                 const salesTaxRate = salesTaxMatch ? parseFloat(salesTaxMatch[1]) / 100 : 0;
 
                 const itemBrokerage = itemBuyPrice * brokerageFeeRate;
-
                 let yieldAfterFees = netTotal;
-                if (sellTo === 'buy') {
-                    yieldAfterFees = yieldAfterFees * (1 - salesTaxRate);
-                } else if (sellTo === 'sell') {
-                    yieldAfterFees = yieldAfterFees * (1 - brokerageFeeRate) * (1 - salesTaxRate);
-                }
-                yieldAfterFees = yieldAfterFees - itemBrokerage;
+                if (sellTo === 'buy') yieldAfterFees = yieldAfterFees * (1 - salesTaxRate);
+                else if (sellTo === 'sell') yieldAfterFees = yieldAfterFees * (1 - brokerageFeeRate) * (1 - salesTaxRate);
+                yieldAfterFees -= itemBrokerage;
 
                 let qtyDisplay = volume;
-                if (buyQtyEnabled) {
-                    qtyDisplay = Math.round(volume * buyQtyPercent);
-                }
+                if (buyQtyEnabled) qtyDisplay = Math.round(volume * buyQtyPercent);
 
                 let margin = itemBuyPrice > 0 ? ((yieldAfterFees - itemBuyPrice) / itemBuyPrice) * 100 : 0;
                 margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
@@ -604,48 +459,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            if (!anyVisible) {
-                if (noResultsMessage) noResultsMessage.style.display = 'block';
-            } else {
-                if (noResultsMessage) noResultsMessage.style.display = 'none';
-            }
+            if (!anyVisible && els.noResults) show(els.noResults);
+            else if (els.noResults) hide(els.noResults);
 
-            generatePricesBtn.disabled = false;
-            generatePricesBtn.classList.remove('loading');
-            resetGeneratePricesBtn();
-
+            els.genPrices.disabled = false;
+            els.genPrices.classList.remove('loading');
+            genPricesBtnReset();
             maybeShowCopyMarketQuickbar();
+            show(els.groupResultsWrap);
         })();
     }
 
-    // --- Sanitize user-editable number inputs ---
-    if (minDailyVolumeInput) {
-        minDailyVolumeInput.addEventListener('input', () => sanitizeInput(minDailyVolumeInput, {min:1, default:1}));
-        minDailyVolumeInput.addEventListener('blur', () => sanitizeInput(minDailyVolumeInput, {min:1, default:1}));
-    }
-    if (stackSizeInput) {
-        stackSizeInput.addEventListener('input', () => sanitizeInput(stackSizeInput, {min:1, default:100}));
-        stackSizeInput.addEventListener('blur', () => sanitizeInput(stackSizeInput, {min:1, default:100}));
-    }
-    if (minMarginInput) {
-        minMarginInput.addEventListener('input', () => sanitizeInput(minMarginInput, {default:5}));
-        minMarginInput.addEventListener('blur', () => sanitizeInput(minMarginInput, {default:5}));
-    }
-    if (maxMarginInput) {
-        maxMarginInput.addEventListener('input', () => sanitizeInput(maxMarginInput, {default:25}));
-        maxMarginInput.addEventListener('blur', () => sanitizeInput(maxMarginInput, {default:25}));
-    }
-
-    copyMarketQuickbarBtn.addEventListener('click', () => {
-        const selectedGroup = marketGroupSelect.options[marketGroupSelect.selectedIndex]?.text || 'Unknown Group';
-
-        const visibleItems = Array.from(marketGroupResults.querySelectorAll('li'))
+    // Quickbar Copy
+    els.copyQuickbar.addEventListener('click', () => {
+        const selectedGroup = els.groupSel.options[els.groupSel.selectedIndex]?.text || 'Unknown Group';
+        const visibleItems = Array.from(els.groupResults.querySelectorAll('li'))
             .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
-
         if (!visibleItems.length) return;
-
         const { enabled: buyQtyEnabled } = getBuyQtySettings();
-
         const quickbarItems = visibleItems.map(li => {
             let [itemName, bracketData] = li.textContent.split('[');
             itemName = itemName.trim();
@@ -658,26 +489,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (joined.length > 25) joined = joined.slice(0, 25);
             return `- ${itemName} [${joined}]`;
         });
-
         const quickbar = `+ ${selectedGroup}\n${quickbarItems.join('\n')}`;
-
         navigator.clipboard.writeText(quickbar).then(() => {
-            copyMarketQuickbarBtn.innerHTML = '<span class="btn-text">Copied!</span>';
+            els.copyQuickbar.innerHTML = '<span class="btn-text">Copied!</span>';
             setTimeout(() => {
-                copyMarketQuickbarBtn.innerHTML = '<span class="btn-text">Copy Market Quickbar</span>';
+                els.copyQuickbar.innerHTML = '<span class="btn-text">Copy Market Quickbar</span>';
             }, 1500);
         });
     });
 
+    // Skills calculation & results
     function updateResults() {
-        const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
-        const broker = parseFloat(document.getElementById('skill_broker')?.value || 0);
-        const conn = parseFloat(document.getElementById('skill_connections')?.value || 0);
-        const diplo = parseFloat(document.getElementById('skill_diplomacy')?.value || 0);
-        const scrap = parseFloat(document.getElementById('skill_scrapmetal')?.value || 0);
+        const accounting = parseFloat($('skill_accounting')?.value || 0);
+        const broker = parseFloat($('skill_broker')?.value || 0);
+        const conn = parseFloat($('skill_connections')?.value || 0);
+        const diplo = parseFloat($('skill_diplomacy')?.value || 0);
+        const scrap = parseFloat($('skill_scrapmetal')?.value || 0);
 
-        let baseFaction = parseFloat(factionInput?.value || 0);
-        let baseCorp = parseFloat(corpInput?.value || 0);
+        let baseFaction = parseFloat(els.factionIn?.value || 0);
+        let baseCorp = parseFloat(els.corpIn?.value || 0);
         const clampStanding = v => Math.max(-10, Math.min(10, v));
         baseFaction = clampStanding(baseFaction);
         baseCorp = clampStanding(baseCorp);
@@ -701,65 +531,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
 
-        factionResult.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
-        corpResult.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
-        brokerFeeOutput.textContent = `${brokerFee.toFixed(2)}%`;
-        taxOutput.textContent = `${reprocessTax.toFixed(2)}%`;
-        salesTaxOutput.textContent = `${salesTax.toFixed(2)}%`;
-        yieldOutput.textContent = `${yieldPercent.toFixed(2)}%`;
+        els.factionRes.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
+        els.corpRes.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
+        els.brokerFee.textContent = `${brokerFee.toFixed(2)}%`;
+        els.tax.textContent = `${reprocessTax.toFixed(2)}%`;
+        els.salesTax.textContent = `${salesTax.toFixed(2)}%`;
+        els.yield.textContent = `${yieldPercent.toFixed(2)}%`;
 
-        resultSkillsBox.style.display = 'block';
-        resultSkillsBox.innerHTML = ''; // Clear box
-        const div1 = document.createElement('div');
-        const strong1 = document.createElement('strong');
-        strong1.textContent = 'Skill Used (Faction)';
-        div1.appendChild(strong1);
-        div1.appendChild(document.createElement('br'));
-        const i1 = document.createElement('i');
-        i1.textContent = baseFaction < 0 ? 'Diplomacy' : 'Connections';
-        div1.appendChild(i1);
-        
-        const div2 = document.createElement('div');
-        const strong2 = document.createElement('strong');
-        strong2.textContent = 'Skill Used (Corp)';
-        div2.appendChild(strong2);
-        div2.appendChild(document.createElement('br'));
-        const i2 = document.createElement('i');
-        i2.textContent = baseCorp < 0 ? 'Diplomacy' : 'Connections';
-        div2.appendChild(i2);
-        
-        resultSkillsBox.appendChild(div1);
-        resultSkillsBox.appendChild(div2);
+        els.skillsBox.style.display = 'block';
+        els.skillsBox.innerHTML = '';
+        const mk = (lbl, val) => {
+            const d = document.createElement('div'), s = document.createElement('strong'), i = document.createElement('i');
+            s.textContent = lbl; d.appendChild(s); d.appendChild(document.createElement('br'));
+            i.textContent = val; d.appendChild(i); return d;
+        };
+        els.skillsBox.appendChild(mk('Skill Used (Faction)', baseFaction < 0 ? 'Diplomacy' : 'Connections'));
+        els.skillsBox.appendChild(mk('Skill Used (Corp)', baseCorp < 0 ? 'Diplomacy' : 'Connections'));
     }
 
-    hubSelect.addEventListener('change', () => {
+    els.hub.addEventListener('change', () => {
         updateResults();
-        updateSpecialFiltersVisibility();
-        const data = hubToFactionCorp[hubSelect.value] || { faction: "[Faction]", corp: "[Corporation]" };
-        factionLabel.textContent = `Base ${data.faction} Standing`;
-        corpLabel.textContent = `Base ${data.corp} Standing`;
+        updateFiltersVisibility();
+        const hubToFactionCorp = {
+            jita: { faction: "Caldari State", corp: "Caldari Navy" },
+            amarr: { faction: "Amarr Empire", corp: "Emperor Family" },
+            rens: { faction: "Minmatar Republic", corp: "Brutor Tribe" },
+            hek: { faction: "Minmatar Republic", corp: "Boundless Creations" },
+            dodixie: { faction: "Gallente Federation", corp: "Federation Navy" },
+        };
+        const data = hubToFactionCorp[els.hub.value] || { faction: "[Faction]", corp: "[Corporation]" };
+        els.factionLabel.textContent = `Base ${data.faction} Standing`;
+        els.corpLabel.textContent = `Base ${data.corp} Standing`;
     });
 
     document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
 
+    // Initial UI state
     updateResults();
     hideAllResultsBelowGenerateList();
-    updateSpecialFiltersVisibility();
-    resetGeneratePricesBtn();
-
-    function clampStandingInput(input) {
-        input.addEventListener('blur', () => {
-            let v = parseFloat(input.value);
-            if (isNaN(v)) v = 0;
-            if (v < -10) v = -10;
-            if (v > 10) v = 10;
-            input.value = v.toFixed(2);
-        });
-    }
-    if (factionInput) clampStandingInput(factionInput);
-    if (corpInput) clampStandingInput(corpInput);
-
-    if (excludeCapitalSelect) {
-        excludeCapitalSelect.addEventListener('input', hideAllResultsBelowGenerateList);
-    }
+    updateFiltersVisibility();
+    genPricesBtnReset();
 });
