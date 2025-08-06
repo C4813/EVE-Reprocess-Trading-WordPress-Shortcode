@@ -6,9 +6,9 @@ A secondary shortcode `[eve_reprocess_clear_cache]` can be used to display a but
 
 This plugin is designed to replace and enhance my current [EVE Reprocessing Master 2.0.1 spreadsheet](https://docs.google.com/spreadsheets/d/13WKDTn-dqjOnJ2HG1KWYh4hZ8Pxv87vWsUtC65It5Mw/edit?usp=sharing) 🔗
 
-### The plugin is still in development, but version 0.6.0 is in a usable state.
+### The plugin is still in development, but version 0.6.6 is in a usable state.
 
-## Version 0.6.0 Features
+## Version 0.6.6 Features
 
 - [x] Trade Hub selection
   - [x] Secondary Trade Hub consideration (Perimeter/Ashab/Frarn/Nakugard/Botane)
@@ -48,6 +48,3 @@ The item price value will be omitted from the data copied to the clipboard. This
 
 ## Post-release
 - [ ] Investigate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
-
-## Known errors
-- [ ] Ammunition might not be calculating as a stack of 100 (it may be calculating it as x100 it's actual value) I need to check this next time I sit down to work on the plugin.
