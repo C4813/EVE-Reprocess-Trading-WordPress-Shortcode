@@ -38,6 +38,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const excludeCapitalSelect = document.getElementById('exclude_capital');
     const excludeCapitalWrapper = document.getElementById('exclude_capital_wrapper');
     const noResultsMessage = document.getElementById('no_results_message');
+    // ---- NEW ELEMENTS for Buy QTY logic ----
+    const buyQtyRecommendationWrapper = document.getElementById('buy_qty_recommendation_wrapper');
+    const buyQtyRecommendation = document.getElementById('buy_qty_recommendation');
+    const buyQtyPercentageWrapper = document.getElementById('buy_qty_percentage_wrapper');
+    const buyQtyPercentage = document.getElementById('buy_qty_percentage');
+    // ----------------------------------------
 
     // Set defaults
     if (stackSizeInput) stackSizeInput.value = 100; // Default stack size
@@ -45,11 +51,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     generateBtn.addEventListener('click', updateMarketGroupResults);
 
-    // Initially hide minDailyVolume, stackSize inputs, and excludeT1/capital selects
+    // Initially hide minDailyVolume, stackSize inputs, and excludeT1/capital selects and buy qty UI
     if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
     if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
     if (excludeT1Wrapper) excludeT1Wrapper.style.display = 'none';
     if (excludeCapitalWrapper) excludeCapitalWrapper.style.display = 'none';
+    // --- Hide buy qty controls initially
+    if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'none';
+    if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
 
     // Flag to track if price filters require full regenerate
     let needRegenerateListAndPrices = false;
@@ -65,6 +74,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (noResultsMessage) noResultsMessage.style.display = 'none';
         if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
         if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
+        // --- Hide buy qty controls too
+        if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'none';
+        if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
         resetGeneratePricesBtn();
         needRegenerateListAndPrices = false;
     }
@@ -137,6 +149,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 hideAllResultsBelowGenerateList();
                 if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
                 if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
+                // --- Hide buy qty controls too
+                if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'none';
+                if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
                 updateSpecialFiltersVisibility();
             });
         }
@@ -327,10 +342,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (marginFieldsWrapper) marginFieldsWrapper.style.display = 'block';
                 if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'block';
                 if (stackSizeInput) stackSizeInput.parentElement.style.display = 'block';
-
+                // --- Show Buy QTY logic controls
+                if (buyQtyRecommendationWrapper) buyQtyRecommendationWrapper.style.display = 'block';
+                if (buyQtyRecommendation && buyQtyRecommendation.value === 'yes') {
+                    if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'block';
+                } else {
+                    if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
+                }
                 resetGeneratePricesBtn();
                 needRegenerateListAndPrices = false;
             }, 10);
+        });
+    }
+
+    // --- BUY QTY LOGIC: Show/hide and default handling
+    if (buyQtyRecommendation) {
+        buyQtyRecommendation.addEventListener('change', function () {
+            if (this.value === 'yes') {
+                if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'block';
+            } else {
+                if (buyQtyPercentageWrapper) buyQtyPercentageWrapper.style.display = 'none';
+            }
+            hideMarketGroupResultsOnly(); // force regeneration, like other price-affecting filters
+        });
+    }
+    if (buyQtyPercentage) {
+        buyQtyPercentage.addEventListener('input', function () {
+            if (this.value < 0) this.value = 0;
+            if (this.value > 100) this.value = 100;
+            hideMarketGroupResultsOnly();
         });
     }
 
@@ -369,6 +409,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- CORE: Get buy qty settings
+    function getBuyQtySettings() {
+        let enabled = false, percent = 0.10;
+        if (buyQtyRecommendation && buyQtyRecommendation.value === 'yes') {
+            enabled = true;
+            if (buyQtyPercentage && !isNaN(parseFloat(buyQtyPercentage.value))) {
+                percent = Math.max(0, Math.min(100, parseFloat(buyQtyPercentage.value))) / 100;
+            }
+        }
+        return { enabled, percent };
+    }
+
     function runGeneratePrices() {
         if (noResultsMessage) noResultsMessage.style.display = 'none';
         generatePricesBtn.disabled = true;
@@ -391,6 +443,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             stackSize = (isNaN(v) || v < 1) ? 100 : v;
             stackSizeInput.value = stackSize;
         }
+
+        // --- BUY QTY: Capture settings
+        const { enabled: buyQtyEnabled, percent: buyQtyPercent } = getBuyQtySettings();
 
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
@@ -492,6 +547,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
 
+                // --- NEW: calculate buy-order QTY if enabled
+                let qtyDisplay = volume;
+                if (buyQtyEnabled) {
+                    qtyDisplay = Math.round(volume * buyQtyPercent);
+                }
+
                 // Margin calculation
                 let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
                 margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
@@ -499,7 +560,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
                 const formattedNet = Math.floor(netTotal).toString();
 
-                li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
+                // [Buy / Net / Vol / Margin%]
+                li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${qtyDisplay} / ${margin}%]`;
+
+                // --- Save qtyDisplay to li for copy-paste use later
+                li.dataset.qty = qtyDisplay;
 
                 if (
                     itemBuyPrice === 0 ||
@@ -571,13 +636,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!visibleItems.length) return;
 
+        // --- Use buy qty logic in copy
+        const { enabled: buyQtyEnabled } = getBuyQtySettings();
+
         const quickbarItems = visibleItems.map(li => {
             let [itemName, bracketData] = li.textContent.split('[');
             itemName = itemName.trim();
             if (!bracketData) return `- ${li.textContent}`;
             bracketData = bracketData.replace(']', '').trim();
             const bracketParts = bracketData.split('/').map(s => s.trim());
-            const quickbarParts = bracketParts.slice(1, 4);
+
+            // Always: [buy|qty|margin]
+            // qty: if enabled, use li.dataset.qty, otherwise bracketParts[2]
+            let qtyPart = buyQtyEnabled ? (li.dataset.qty || bracketParts[2]) : bracketParts[2];
+            let quickbarParts = [bracketParts[1], qtyPart, bracketParts[3]];
             let joined = quickbarParts.join('|');
             if (joined.length > 25) joined = joined.slice(0, 25);
             return `- ${itemName} [${joined}]`;
