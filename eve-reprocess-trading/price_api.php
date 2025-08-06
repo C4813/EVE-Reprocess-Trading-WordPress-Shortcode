@@ -30,11 +30,16 @@ $primary_system = $hub_map[$hub]['primary'];
 $secondary_system = $hub_map[$hub]['secondary'];
 
 $invTypes = json_decode(file_get_contents(__DIR__ . '/invTypes.json'), true);
-$map_file = __DIR__ . "/location_system_map.json";
+
+// === Use cache subfolder ===
+$cache_dir = __DIR__ . "/cache";
+if (!is_dir($cache_dir)) mkdir($cache_dir);
+
+$map_file = $cache_dir . "/location_system_map.json";
 $system_map = file_exists($map_file) ? json_decode(file_get_contents($map_file), true) : [];
 
 // === Chunked cache logic ===
-$cache_prefix = __DIR__ . "/esi_cache_{$hub}_{$scope}";
+$cache_prefix = __DIR__ . "/cache/esi_cache_{$hub}_{$scope}";
 $cache_ttl = 86400; // 24 hours
 
 // Load ALL cache chunks and merge
