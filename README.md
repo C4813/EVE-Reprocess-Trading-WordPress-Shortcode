@@ -48,3 +48,6 @@ The item price value will be omitted from the data copied to the clipboard. This
 
 ## Post-release
 - [ ] Investigate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
+
+## Known errors
+- [ ] Ammunition might not be calculating as a stack of 100 (it may be calculating it as x100 it's actual value) I need to check this next time I sit down to work on the plugin.
