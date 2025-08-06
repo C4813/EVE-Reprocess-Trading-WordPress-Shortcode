@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Elements
+    // --- Elements
     const hubSelect = document.getElementById('hub_select');
     const generateBtn = document.getElementById('generate_btn');
     const generatePricesBtn = document.getElementById('generate_prices_btn');
@@ -39,15 +39,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     generateBtn.addEventListener('click', updateMarketGroupResults);
 
-    // Initially hide minDailyVolume, stackSize inputs, and excludeT1 select
+    // --- Hide filter controls initially
     if (minDailyVolumeInput) minDailyVolumeInput.parentElement.style.display = 'none';
     if (stackSizeInput) stackSizeInput.parentElement.style.display = 'none';
     if (excludeT1Wrapper) excludeT1Wrapper.style.display = 'none';
 
-    // Flag to track if price filters require full regenerate
     let needRegenerateListAndPrices = false;
 
-    // Utility: Hide all results, buttons, and filters below Generate List button
     function hideAllResultsBelowGenerateList() {
         marketGroupResultsWrapper.style.display = 'none';
         generatePricesBtn.style.display = 'none';
@@ -62,7 +60,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         needRegenerateListAndPrices = false;
     }
 
-    // Utility: Hide only market group results and price table, keep filters/buttons visible
     function hideMarketGroupResultsOnly() {
         marketGroupResultsWrapper.style.display = 'none';
         tableWrapper.style.display = 'none';
@@ -83,14 +80,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.classList.remove('loading');
     }
 
-    // Show or hide Exclude T1 select only if Ship Equipment group selected
     function updateExcludeT1Visibility() {
         if (!excludeT1Select || !excludeT1Wrapper) return;
         if (marketGroupSelect.value === "9") { // Ship Equipment
             excludeT1Wrapper.style.display = 'block';
         } else {
             excludeT1Wrapper.style.display = 'none';
-            excludeT1Select.value = 'no'; // reset when hidden
+            excludeT1Select.value = 'no';
         }
     }
 
@@ -99,19 +95,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         hideAllResultsBelowGenerateList();
     });
 
-    // Hide minDailyVolume and stackSize on main filter changes, and also hide excludeT1 if needed
     [
-        hubSelect,
-        factionInput, corpInput,
+        hubSelect, factionInput, corpInput,
         document.getElementById('skill_accounting'),
         document.getElementById('skill_broker'),
         document.getElementById('skill_connections'),
         document.getElementById('skill_criminal'),
         document.getElementById('skill_diplomacy'),
         document.getElementById('skill_scrapmetal'),
-        marketGroupSelect,
-        t2Toggle,
-        excludeT1Select
+        marketGroupSelect, t2Toggle, excludeT1Select
     ].forEach(el => {
         if (el) {
             el.addEventListener('input', () => {
@@ -123,22 +115,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Price filter inputs trigger only hiding market results, not all filters
     [
-        includeSecondarySelect,
-        sellToSelect,
-        minMarginInput,
-        maxMarginInput,
-        minDailyVolumeInput,
-        stackSizeInput
+        includeSecondarySelect, sellToSelect,
+        minMarginInput, maxMarginInput,
+        minDailyVolumeInput, stackSizeInput
     ].forEach(el => {
-        if (el) {
-            el.addEventListener('input', hideMarketGroupResultsOnly);
-        }
+        if (el) el.addEventListener('input', hideMarketGroupResultsOnly);
     });
 
-    // Data vars and constants
-    let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {}, currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
+    // --- Data
+    let invTypes = {}, marketGroups = {}, reprocessYields = {}, metaTypes = {};
+    let currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
     const hubToFactionCorp = {
         jita: { faction: "Caldari State", corp: "Caldari Navy" },
         amarr: { faction: "Amarr Empire", corp: "Emperor Family" },
@@ -151,25 +138,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         return fetch(url).then(r => r.json());
     }
 
-    // Load data asynchronously
-    let [invTypesRaw, marketGroupsRaw, reprocessYieldsRaw, metaTypesRaw, adjustedPricesArray] = await Promise.all([
+    async function refreshAdjustedPricesIfNeeded() {
+        // Only refreshes if cache is missing or old (24h)
+        const resp = await fetch('/wp-content/plugins/eve-reprocess-trading/adjusted_prices.php');
+        const result = await resp.json();
+        if (!result.ok) throw new Error('Adjusted prices cache failed: ' + (result.error || 'unknown'));
+        // Wait 200ms for disk flush
+        await new Promise(res => setTimeout(res, 200));
+        return result.files;
+    }
+
+    async function loadAllAdjustedPricesFiles(basePath, prefix, limit = 150) {
+        let allData = [];
+        let index = 1;
+        while (true) {
+            const url = `${basePath}/${prefix}_${index}.json`;
+            try {
+                const data = await loadJSON(url);
+                if (!Array.isArray(data) || data.length === 0) break;
+                allData = allData.concat(data);
+                if (data.length < limit) break;
+                index++;
+            } catch (e) {
+                break;
+            }
+        }
+        return allData;
+    }
+
+    let [
+        invTypesRaw,
+        marketGroupsRaw,
+        reprocessYieldsRaw,
+        metaTypesRaw
+    ] = await Promise.all([
         loadJSON('/wp-content/plugins/eve-reprocess-trading/invTypes.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/marketGroups.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/reprocess_yield.json'),
         loadJSON('/wp-content/plugins/eve-reprocess-trading/invMetaTypes.json'),
-        loadJSON('/wp-content/plugins/eve-reprocess-trading/adjusted_prices.json')
     ]);
+
     invTypes = invTypesRaw;
     marketGroups = marketGroupsRaw;
     reprocessYields = reprocessYieldsRaw;
     metaTypes = metaTypesRaw;
 
-    let adjustedPricesByTypeID = {};
-    adjustedPricesArray.forEach(obj => {
-        if (obj.type_id && typeof obj.adjusted_price === "number") {
-            adjustedPricesByTypeID[obj.type_id] = obj.adjusted_price;
-        }
-    });
+    async function getAdjustedPricesByTypeID() {
+        await refreshAdjustedPricesIfNeeded();
+        let adjustedPricesArray = await loadAllAdjustedPricesFiles(
+            '/wp-content/plugins/eve-reprocess-trading',
+            'adjusted_prices',
+            150
+        );
+        let adjustedPricesByTypeID = {};
+        adjustedPricesArray.forEach(obj => {
+            if (obj.type_id && typeof obj.adjusted_price === "number") {
+                adjustedPricesByTypeID[obj.type_id] = obj.adjusted_price;
+            }
+        });
+        return adjustedPricesByTypeID;
+    }
 
     function getTopLevelGroup(marketGroupID) {
         let current = marketGroups[marketGroupID];
@@ -190,12 +218,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Generate market group results list
     function updateMarketGroupResults() {
         generateBtn.disabled = true;
         generateBtn.classList.add('loading');
         generateBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">List Generating<br><small>This may take several seconds<br>Do not refresh the page</small></span>`;
-
         requestAnimationFrame(() => {
             setTimeout(() => {
                 const selectedTopGroup = marketGroupSelect.value;
@@ -213,7 +239,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!hasValidMetaGroup(item.typeID)) return false;
                         if (!item.published) return false;
 
-                        // Exclude T1 check if enabled and Ship Equipment selected
                         if (excludeT1Select && excludeT1Select.value === 'yes' && selectedTopGroup === '9') {
                             const blueprintName = name + ' Blueprint';
                             if (invTypes.hasOwnProperty(blueprintName)) {
@@ -229,12 +254,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         const components = Object.entries(yieldData)
                             .map(([matID, qty]) => {
+                                const portionSize = item.portionSize || 1;
+                                const perItemQty = (qty * yieldPercent) / portionSize;
+                                if (perItemQty < 0.0001) return null;
                                 const mineralEntry = Object.entries(invTypes).find(([, v]) => v.typeID == matID);
                                 const mineralName = mineralEntry ? mineralEntry[0] : `#${matID}`;
-                                // Do NOT floor here! Store the unfloored value:
-                                return { mineralName, rawQty: qty * yieldPercent };
+                                materialSet.add(mineralName);
+                                return { mineralName, perItemQty };
                             })
-                            .filter(c => c.rawQty >= 0.01); // filter out true zeros, leave as rawQty
+                            .filter(c => c);
 
                         itemBreakdown.push({ name, components });
                     });
@@ -300,29 +328,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    function runGeneratePrices() {
+    async function runGeneratePrices() {
         if (noResultsMessage) noResultsMessage.style.display = 'none';
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
-    
+
+        // Always refresh adjusted prices if needed
+        let adjustedPricesByTypeID = await getAdjustedPricesByTypeID();
+
         let minMargin = minMarginInput ? parseFloat(minMarginInput.value) : 5;
         let maxMargin = maxMarginInput ? parseFloat(maxMarginInput.value) : 25;
-    
+
         let minDailyVolume = 1;
         if (minDailyVolumeInput) {
             let v = parseInt(minDailyVolumeInput.value, 10);
             minDailyVolume = (isNaN(v) || v < 1) ? 1 : v;
             minDailyVolumeInput.value = minDailyVolume;
         }
-    
+
         let stackSize = 1;
         if (stackSizeInput) {
             let v = parseInt(stackSizeInput.value, 10);
             stackSize = (isNaN(v) || v < 1) ? 1 : v;
             stackSizeInput.value = stackSize;
         }
-    
+
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
             .filter(Boolean);
@@ -331,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < itemNames.length; i += batchSize) {
             batches.push(itemNames.slice(i, i + batchSize));
         }
-    
+
         (async () => {
             const priceResults = [];
             for (const batch of batches) {
@@ -344,9 +375,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Object.assign(allSell, data.sell || {});
                 Object.assign(allVolumes, data.volumes || {});
             });
-    
+
             const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
-    
+
             const sellTo = sellToSelect?.value || 'buy';
             let materialsNeeded = new Set();
             filteredItemNames.forEach(itemName => {
@@ -365,7 +396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             for (let i = 0; i < allNames.length; i += batchSize) {
                 materialBatches.push(allNames.slice(i, i + batchSize));
             }
-    
+
             const finalPriceResults = [];
             for (const batch of materialBatches) {
                 finalPriceResults.push(await fetchBatch(batch));
@@ -380,7 +411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentMaterialPrices = finalBuy;
             currentSellPrices = finalSell;
             currentVolumes = finalVolumes;
-    
+
             let anyVisible = false;
             marketGroupResults.querySelectorAll('li').forEach(li => {
                 const itemName = li.dataset.name;
@@ -390,49 +421,44 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-    
-                // Stack math: yield for entire stack
+
                 let totalYieldValue = 0;
                 let adjustedValue = 0;
-                components.forEach(({ mineralName, rawQty }) => {
-                    // THIS is correct:
-                    const totalQty = Math.floor(rawQty * stackSize);
+                const portionSize = invTypes[itemName]?.portionSize || 1;
+                components.forEach(({ mineralName, perItemQty }) => {
+                    const totalQty = Math.floor(perItemQty * stackSize);
                     if (totalQty < 1) return;
                     const price = priceSource === 'sell'
                         ? currentSellPrices[mineralName] ?? 0
                         : currentMaterialPrices[mineralName] ?? 0;
                     totalYieldValue += totalQty * price;
-    
+
                     const typeID = invTypes[mineralName]?.typeID;
                     if (typeID && adjustedPricesByTypeID[typeID]) {
                         adjustedValue += totalQty * adjustedPricesByTypeID[typeID];
                     }
                 });
-    
-                // Per item yield value (based on stack math)
+
                 const perItemYieldValue = stackSize > 0 ? totalYieldValue / stackSize : 0;
-    
-                // Reprocessing tax
+
                 const reprocessTaxText = taxOutput.textContent || "0%";
                 const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
                 const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
                 const taxAmount = adjustedValue * reprocessTaxRate;
-    
-                // Apply tax to per-item yield
+
                 const netTotal = stackSize > 0 ? (totalYieldValue - taxAmount) / stackSize : 0;
-    
+
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
-    
-                // Margin calculation
+
                 let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
                 margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-    
+
                 const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
                 const formattedNet = Math.floor(netTotal).toString();
-    
+
                 li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${volume} / ${margin}%]`;
-    
+
                 if (
                     itemBuyPrice === 0 ||
                     perItemYieldValue <= 0 ||
@@ -447,22 +473,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     anyVisible = true;
                 }
             });
-    
+
             if (!anyVisible) {
                 if (noResultsMessage) noResultsMessage.style.display = 'block';
             } else {
                 if (noResultsMessage) noResultsMessage.style.display = 'none';
             }
-    
+
             generatePricesBtn.disabled = false;
             generatePricesBtn.classList.remove('loading');
             resetGeneratePricesBtn();
-    
+
             maybeShowCopyMarketQuickbar();
         })();
     }
 
-    // Validation for minDailyVolumeInput and stackSizeInput
     if (minDailyVolumeInput) {
         minDailyVolumeInput.value = 1;
         minDailyVolumeInput.min = 1;
@@ -494,7 +519,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Copy Market Quickbar functionality
     copyMarketQuickbarBtn.addEventListener('click', () => {
         const selectedGroup = marketGroupSelect.options[marketGroupSelect.selectedIndex]?.text || 'Unknown Group';
 
@@ -525,7 +549,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // Skills and result update on load and input
     function updateResults() {
         const accounting = parseFloat(document.getElementById('skill_accounting')?.value || 0);
         const broker = parseFloat(document.getElementById('skill_broker')?.value || 0);
@@ -588,7 +611,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateExcludeT1Visibility();
     resetGeneratePricesBtn();
 
-    // Standing input clamping to range on blur
     function clampStandingInput(input) {
         input.addEventListener('blur', () => {
             let v = parseFloat(input.value);
