@@ -23,7 +23,7 @@ This plugin is designed to replace and enhance my current [EVE Reprocessing Mast
 - Price data if the cache is greater than 6 hours old
 - Cache files are located in `wp-content/uploads/eve-reprocess-trading/cache`
 
-### How to read results:
+## How to read results:
 `Item Name [Item Buy Price / Item Reprocessed Value / Regional Volume / Margin%]`
 
 - **Item Reprocessed Value** = The value of the reprocessed materials from reprocessing a stack, and selling the yielded materials to your selected market, at your selected price, minus relevant taxes/fees (e.g. Buying from Jita, Selling to Sell Orders, minus brokerage fee, sales tax, and reprocessing tax if applicable).
@@ -32,13 +32,13 @@ This plugin is designed to replace and enhance my current [EVE Reprocessing Mast
 #### Example:
 `Medium Armor Maintenance Bot I [30210 / 36195 / 281 / 19.81%]`
 
-### Copy to market quickbar
+## Copy to market quickbar
 The item price value will be omitted from the data copied to the clipboard. This is because you can only have 25 characters as a "note" on an item in the quickbar.
 
 #### Example in-game quickbar:
 `Medium Armor Maintenance Bot I [36195|281|19.81%]`
 
-### Buy-Order QTY Recommendation:
+## Buy-Order QTY Recommendation:
 This changes the volume figure with x% (that you set) of that figure. This is to help speed things up when creating buy orders. You can just click the item, read it's value, see how many you can expect to buy each day, and put up a buy order.
 
 #### Example before setting the %
