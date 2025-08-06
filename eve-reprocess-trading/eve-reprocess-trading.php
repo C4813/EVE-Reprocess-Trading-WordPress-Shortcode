@@ -2,22 +2,22 @@
 /*
 Plugin Name: EVE Reprocess Trading
 Description: Displays trade hub mineral prices, brokerage and tax estimates based on skills and standings.
-Version: 0.6.9
+Version: 0.7.0
 Author: C4813
 */
 
 defined('ABSPATH') || exit;
 
-// Shortcode for main UI
+// ---- Shortcode for Main UI ----
 function eve_reprocess_trading_shortcode() {
-    // Load static mineral data (never shown to user)
+    // Load static mineral data (never shown to user, but forces plugin files to load on page)
     $invTypes = json_decode(file_get_contents(__DIR__ . '/invTypes.json'), true);
 
     // Enqueue plugin assets
     wp_enqueue_style('eve-reprocess-trading-style', plugin_dir_url(__FILE__) . 'style.css');
     wp_enqueue_script('eve-reprocess-trading-script', plugin_dir_url(__FILE__) . 'script.js', [], false, true);
 
-    // Provide hub → faction/corp mapping to JS
+    // Localize hub data to JS
     wp_localize_script('eve-reprocess-trading-script', 'EVE_DATA', [
         'factionCorpMap' => [
             'Jita'     => ['faction' => 'Caldari State',      'corp' => 'Caldari Navy'],
@@ -34,10 +34,9 @@ function eve_reprocess_trading_shortcode() {
 }
 add_shortcode('eve_reprocess_trading', 'eve_reprocess_trading_shortcode');
 
-// --- Secure Cache Clear Form with Nonce ---
+// ---- Admin: Cache Clear Shortcode ----
 add_shortcode('eve_reprocess_clear_cache', function() {
-    if (!current_user_can('manage_options')) return ''; // Only for admins
-
+    if (!current_user_can('manage_options')) return '';
     $deleted = false;
     if (
         isset($_POST['eve_reprocess_clear_cache']) &&
@@ -47,9 +46,7 @@ add_shortcode('eve_reprocess_clear_cache', function() {
         $upload_dir = wp_upload_dir();
         $cache_dir = trailingslashit($upload_dir['basedir']) . 'eve-reprocess-trading/cache/';
         if (is_dir($cache_dir)) {
-            foreach (glob($cache_dir . '*.json') as $filename) {
-                @unlink($filename);
-            }
+            foreach (glob($cache_dir . '*.json') as $filename) @unlink($filename);
         }
         $deleted = true;
     }
@@ -58,37 +55,33 @@ add_shortcode('eve_reprocess_clear_cache', function() {
     <form method="post" style="margin:30px 0;">
         <?php wp_nonce_field('eve_reprocess_clear_cache_action', 'eve_reprocess_clear_cache_nonce'); ?>
         <button type="submit" name="eve_reprocess_clear_cache"
-            onclick="return confirm('Are you sure you want to clear the plugin cache?');"
-            style="background: #c0392b; color:#fff; font-weight:bold; padding:10px 24px; border-radius:8px; border:none; font-size:16px;">
+            class="eve-btn eve-cache-clear-btn"
+            onclick="return confirm('Are you sure you want to clear the plugin cache?');">
             Clear ESI Cache
         </button>
     </form>
     <?php if ($deleted): ?>
-        <div style="color:#27ae60; font-weight:bold;">All plugin caches cleared!</div>
+        <div class="eve-cache-success">All plugin caches cleared!</div>
     <?php endif;
     return ob_get_clean();
 });
 
-// --- Ensure cache folders exist on activation ---
+// ---- Create cache folders on activation ----
 register_activation_hook(__FILE__, 'eve_reprocess_create_cache_folder');
 function eve_reprocess_create_cache_folder() {
     $upload_dir = wp_upload_dir();
     $base = trailingslashit($upload_dir['basedir']) . 'eve-reprocess-trading/';
-    wp_mkdir_p($base);
     wp_mkdir_p($base . 'cache/');
 }
 
-// --- Example AJAX endpoint security (optional future use) ---
+// ---- Optional: AJAX endpoint stub ----
 add_action('wp_ajax_eve_reprocess_refresh_cache', 'eve_reprocess_refresh_cache_handler');
 function eve_reprocess_refresh_cache_handler() {
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error('Unauthorized');
-    }
-    // Implement your cache refresh logic here (future use)
+    if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
     $result = eve_reprocess_refresh_cache();
     wp_send_json_success($result);
 }
 function eve_reprocess_refresh_cache() {
-    // Implement your cache refresh logic or call adjusted_prices.php if needed
-    // Return array or status message
+    // Implement cache refresh if desired
+    return ['ok' => true, 'msg' => 'Cache refresh not implemented'];
 }
