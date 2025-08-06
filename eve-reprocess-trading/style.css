@@ -1,4 +1,4 @@
-/* ===== EVE Reprocess Unified Style ===== */
+/* ===== EVE Reprocess Unified Style (Reduced) ===== */
 
 :root {
   --primary-bg: #fff;
@@ -26,7 +26,6 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 0;
 }
 .eve-col {
   flex: 1 1 0;
@@ -47,15 +46,13 @@ label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
   width: 100%;
   gap: 5px;
+  text-align: center;
 }
 
 /* UNIFORM USER INPUTS */
-.eve-input,
-select.eve-input,
-input[type="number"].eve-input {
+.eve-input {
   width: var(--input-width);
   max-width: 100%;
   height: var(--input-height);
@@ -69,8 +66,6 @@ input[type="number"].eve-input {
   outline: none;
   transition: border-color 0.2s;
 }
-
-/* SELECT DROPDOWN ARROW */
 select.eve-input {
   background-image: var(--select-arrow);
   background-repeat: no-repeat;
@@ -82,11 +77,7 @@ select.eve-input {
 }
 
 /* BUTTONS */
-button.eve-btn,
-#market_action_buttons button,
-#generate_btn,
-#generate_prices_btn,
-#copy_market_quickbar_btn {
+.eve-btn {
   font-size: 18px;
   font-weight: bold;
   padding: 12px 30px;
@@ -105,15 +96,14 @@ button.eve-btn,
   min-width: 180px;
   max-width: 90vw;
   width: auto;
-  white-space: normal;   /* Allow line wrap for extra long text */
+  white-space: normal;
 }
+.eve-btn:active { transform: scale(0.96);}
+.eve-btn:hover { background: #222;}
+.eve-btn:disabled {background: #888; cursor: not-allowed;}
+.eve-cache-clear-btn { background: #c0392b; }
+.eve-cache-clear-btn:hover { background: #a93226; }
 
-/* Button animation */
-button.eve-btn:active { transform: scale(0.96);}
-button.eve-btn:hover { background: #222;}
-button.eve-btn:disabled {background: #888; cursor: not-allowed;}
-
-/* For bulletproof centering */
 #market_action_buttons {
   display: flex;
   flex-direction: column;
@@ -137,7 +127,7 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
 }
 @keyframes spin {to { transform: rotate(360deg);}}
 
-/* FIELD WRAPPERS FOR FILTERS AND BUTTONS */
+/* FILTERS & BUTTON WRAPPERS */
 #after_generate_controls, 
 #market_group_filter, 
 #exclude_t1_wrapper, 
@@ -154,16 +144,15 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
   margin: 12px auto 0 auto;
   width: 100%;
 }
-
-/* SPACING BETWEEN INDIVIDUAL FILTER GROUPS */
 #after_generate_controls > div,
 #market_group_filter,
 #exclude_t1_wrapper,
 #t2_toggle_wrapper {
   margin-bottom: 10px;
 }
+#after_generate_controls > div:not(:last-child) { margin-bottom: 12px; }
 
-/* FIX: LABELS STACK FIELD BELOW HEADING */
+/* FIELD LABEL STACKING FIX */
 #after_generate_controls label,
 #market_group_filter label,
 #exclude_t1_wrapper label,
@@ -210,7 +199,6 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
   margin-top: 10px;
   box-shadow: 0 1px 4px rgba(60,60,60,0.07);
 }
-
 .output {
   width: var(--input-width);
   min-height: var(--input-height);
@@ -222,21 +210,6 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* RESPONSIVE DESIGN */
-@media (max-width: 700px) {
-  .eve-skills-columns { flex-direction: column; align-items: center; }
-  .eve-border-right {border-right: none; padding-right: 0;}
-  .eve-col {max-width: 100%; width: 100%;}
-  .eve-result-box, .output, .eve-input, select.eve-input { max-width: 98vw; width: 98vw; }
-  .eve-reprocess-table {font-size: 13px;}
-}
-
-@media (max-width: 520px) {
-  .eve-input, select.eve-input, input[type="number"].eve-input {width: 98vw; min-width: 0;}
-  .eve-result-box {max-width: 99vw;}
-  .output {width: 99vw;}
 }
 
 /* GENERAL LIST STYLING */
@@ -258,18 +231,22 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
 #market_group_results li { margin: 4px 0; }
 #material_list_flat { display: none; }
 
-/* VISUAL CONSISTENCY FOR FILTERS */
-#after_generate_controls > div:not(:last-child) { margin-bottom: 12px; }
-#market_action_buttons { margin-top: 18px; gap: 12px; }
-
-/* NO RESULTS */
-#no_results_message {
-  color: #c00;
+/* NO RESULTS / SUCCESS / ERROR MESSAGES */
+#no_results_message,
+.eve-cache-success {
+  color: #27ae60;
   font-weight: bold;
   margin-top: 20px;
   text-align: center;
 }
+.eve-cache-error {
+  color: #c0392b;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+}
 
+/* QTY Percentage */
 #buy_qty_percentage_wrapper label,
 #buy_qty_percentage_wrapper input,
 #buy_qty_percentage_wrapper span {
@@ -279,4 +256,18 @@ button.eve-btn:disabled {background: #888; cursor: not-allowed;}
   margin-right: 0.2em;
 }
 
-/* ===== END EVE Reprocess Style ===== */
+/* RESPONSIVE DESIGN */
+@media (max-width: 700px) {
+  .eve-skills-columns { flex-direction: column; align-items: center; }
+  .eve-border-right {border-right: none; padding-right: 0;}
+  .eve-col {max-width: 100%; width: 100%;}
+  .eve-result-box, .output, .eve-input, select.eve-input { max-width: 98vw; width: 98vw; }
+  .eve-reprocess-table {font-size: 13px;}
+}
+@media (max-width: 520px) {
+  .eve-input, select.eve-input, input[type="number"].eve-input {width: 98vw; min-width: 0;}
+  .eve-result-box {max-width: 99vw;}
+  .output {width: 99vw;}
+}
+
+/* ===== END EVE Reprocess Style (Reduced) ===== */
