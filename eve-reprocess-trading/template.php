@@ -74,6 +74,14 @@
             </select>
         </label>
     </div>
+    
+    <div id="exclude_capital_wrapper" style="margin-bottom:12px;">
+      <label for="exclude_capital" style="font-weight:bold;">Exclude Capital-Sized?</label>
+      <select id="exclude_capital" class="eve-input">
+        <option value="yes" selected>Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
 
     <!-- Exclude T1 Modules? (Meta only) -->
     <div id="exclude_t1_wrapper" style="display:none;">
