@@ -426,27 +426,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         generatePricesBtn.disabled = true;
         generatePricesBtn.classList.add('loading');
         generatePricesBtn.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
-
+    
         let minMargin = minMarginInput ? parseFloat(minMarginInput.value) : 5;
         let maxMargin = maxMarginInput ? parseFloat(maxMarginInput.value) : 25;
-
+    
         let minDailyVolume = 1;
         if (minDailyVolumeInput) {
             let v = parseInt(minDailyVolumeInput.value, 10);
             minDailyVolume = (isNaN(v) || v < 1) ? 1 : v;
             minDailyVolumeInput.value = minDailyVolume;
         }
-
+    
         let stackSize = 100;
         if (stackSizeInput) {
             let v = parseInt(stackSizeInput.value, 10);
             stackSize = (isNaN(v) || v < 1) ? 100 : v;
             stackSizeInput.value = stackSize;
         }
-
+    
         // --- BUY QTY: Capture settings
         const { enabled: buyQtyEnabled, percent: buyQtyPercent } = getBuyQtySettings();
-
+    
         const itemNames = Array.from(marketGroupResults.querySelectorAll('li'))
             .map(li => li.dataset.name)
             .filter(Boolean);
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let i = 0; i < itemNames.length; i += batchSize) {
             batches.push(itemNames.slice(i, i + batchSize));
         }
-
+    
         (async () => {
             const priceResults = [];
             for (const batch of batches) {
@@ -468,9 +468,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Object.assign(allSell, data.sell || {});
                 Object.assign(allVolumes, data.volumes || {});
             });
-
+    
             const filteredItemNames = itemNames.filter(name => (allVolumes[name] || 0) > 0);
-
+    
             const sellTo = sellToSelect?.value || 'buy';
             let materialsNeeded = new Set();
             filteredItemNames.forEach(itemName => {
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             for (let i = 0; i < allNames.length; i += batchSize) {
                 materialBatches.push(allNames.slice(i, i + batchSize));
             }
-
+    
             const finalPriceResults = [];
             for (const batch of materialBatches) {
                 finalPriceResults.push(await fetchBatch(batch));
@@ -504,7 +504,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentMaterialPrices = finalBuy;
             currentSellPrices = finalSell;
             currentVolumes = finalVolumes;
-
+    
             let anyVisible = false;
             marketGroupResults.querySelectorAll('li').forEach(li => {
                 const itemName = li.dataset.name;
@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const components = JSON.parse(li.dataset.components || '[]');
                 const priceSource = sellTo === 'sell' ? 'sell' : 'buy';
-
+    
                 // Stack math: yield for entire stack
                 let totalYieldValue = 0;
                 let adjustedValue = 0;
@@ -525,47 +525,74 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ? currentSellPrices[mineralName] ?? 0
                         : currentMaterialPrices[mineralName] ?? 0;
                     totalYieldValue += totalQty * price;
-
+    
                     const typeID = invTypes[mineralName]?.typeID;
                     if (typeID && adjustedPricesByTypeID[typeID]) {
                         adjustedValue += totalQty * adjustedPricesByTypeID[typeID];
                     }
                 });
-
+    
                 // Per item yield value (based on stack math)
                 const perItemYieldValue = stackSize > 0 ? totalYieldValue / stackSize : 0;
-
+    
                 // Reprocessing tax
                 const reprocessTaxText = taxOutput.textContent || "0%";
                 const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
                 const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
                 const taxAmount = adjustedValue * reprocessTaxRate;
-
+    
                 // Apply tax to per-item yield
                 const netTotal = stackSize > 0 ? (totalYieldValue - taxAmount) / stackSize : 0;
-
                 const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
                 const volume = currentVolumes[itemName] ?? 0;
-
+    
+                // --- START: Fee deductions (insert after netTotal calculation above) ---
+                // Extract brokerage and sales tax rates from the UI
+                const brokerFeeText = brokerFeeOutput.textContent || "0%";
+                const brokerFeeMatch = brokerFeeText.match(/([\d.]+)%/);
+                const brokerageFeeRate = brokerFeeMatch ? parseFloat(brokerFeeMatch[1]) / 100 : 0;
+    
+                const salesTaxText = salesTaxOutput.textContent || "0%";
+                const salesTaxMatch = salesTaxText.match(/([\d.]+)%/);
+                const salesTaxRate = salesTaxMatch ? parseFloat(salesTaxMatch[1]) / 100 : 0;
+    
+                // Always deduct brokerage fee for buying the item (from item buy price)
+                const itemBrokerage = itemBuyPrice * brokerageFeeRate;
+    
+                // Apply sales tax and/or brokerage fee to minerals, per Sell To selection
+                let yieldAfterFees = netTotal; // netTotal is already after reprocessing tax
+    
+                if (sellTo === 'buy') {
+                    // Sell minerals to buy orders: sales tax only
+                    yieldAfterFees = yieldAfterFees * (1 - salesTaxRate);
+                } else if (sellTo === 'sell') {
+                    // Sell minerals to sell orders: brokerage + sales tax
+                    yieldAfterFees = yieldAfterFees * (1 - brokerageFeeRate) * (1 - salesTaxRate);
+                }
+    
+                // Always subtract brokerage fee for buying the item to reprocess
+                yieldAfterFees = yieldAfterFees - itemBrokerage;
+                // --- END: Fee deductions ---
+    
                 // --- NEW: calculate buy-order QTY if enabled
                 let qtyDisplay = volume;
                 if (buyQtyEnabled) {
                     qtyDisplay = Math.round(volume * buyQtyPercent);
                 }
-
+    
                 // Margin calculation
-                let margin = itemBuyPrice > 0 ? ((netTotal - itemBuyPrice) / itemBuyPrice) * 100 : 0;
+                let margin = itemBuyPrice > 0 ? ((yieldAfterFees - itemBuyPrice) / itemBuyPrice) * 100 : 0;
                 margin = isFinite(margin) ? margin.toFixed(2) : "0.00";
-
+    
                 const formattedBuy = itemBuyPrice % 1 === 0 ? itemBuyPrice.toFixed(0) : itemBuyPrice.toFixed(2);
-                const formattedNet = Math.floor(netTotal).toString();
-
+                const formattedNet = Math.floor(yieldAfterFees).toString();
+    
                 // [Buy / Net / Vol / Margin%]
                 li.textContent = `${itemName} [${formattedBuy} / ${formattedNet} / ${qtyDisplay} / ${margin}%]`;
-
+    
                 // --- Save qtyDisplay to li for copy-paste use later
                 li.dataset.qty = qtyDisplay;
-
+    
                 if (
                     itemBuyPrice === 0 ||
                     perItemYieldValue <= 0 ||
@@ -580,17 +607,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                     anyVisible = true;
                 }
             });
-
+    
             if (!anyVisible) {
                 if (noResultsMessage) noResultsMessage.style.display = 'block';
             } else {
                 if (noResultsMessage) noResultsMessage.style.display = 'none';
             }
-
+    
             generatePricesBtn.disabled = false;
             generatePricesBtn.classList.remove('loading');
             resetGeneratePricesBtn();
-
+    
             maybeShowCopyMarketQuickbar();
         })();
     }
