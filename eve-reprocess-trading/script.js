@@ -209,6 +209,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function hasValidMetaGroup(typeID) {
+        // If metaTypes does not contain this typeID, allow it (fallback for drones, T1 rigs, etc)
+        if (!(typeID in metaTypes)) return true;
         const entry = metaTypes[typeID];
         const includeT2 = t2Toggle?.value || "no";
         if (includeT2 === "yes") {
@@ -504,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     if (stackSizeInput) {
-        stackSizeInput.value = 1;
+        stackSizeInput.value = 100;
         stackSizeInput.min = 1;
         stackSizeInput.step = 1;
         stackSizeInput.addEventListener('input', () => {
