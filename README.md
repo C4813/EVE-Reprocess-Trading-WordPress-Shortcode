@@ -6,9 +6,9 @@ A secondary shortcode `[eve_reprocess_clear_cache]` can be used to display a but
 
 This plugin is designed to replace and enhance my current [EVE Reprocessing Master 2.0.1 spreadsheet](https://docs.google.com/spreadsheets/d/13WKDTn-dqjOnJ2HG1KWYh4hZ8Pxv87vWsUtC65It5Mw/edit?usp=sharing) 🔗
 
-### The plugin is still in development, but version 0.6.9 is in a usable state.
+### The plugin is still in development, but version 0.7.0 is in a usable state.
 
-## Version 0.6.9 Features
+## Version 0.7.0 Features
 
 - [x] Trade Hub selection
   - [x] Secondary Trade Hub consideration (Perimeter/Ashab/Frarn/Nakugard/Botane)
