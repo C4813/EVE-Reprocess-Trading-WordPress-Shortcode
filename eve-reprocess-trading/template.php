@@ -1,33 +1,37 @@
-<?php /* template.php (Updated with Adv Broker & Relist Fees) */ ?>
-<div class="eve-reprocess-wrapper">
+<?php /* template.php */ ?>
+<link rel="stylesheet" href="style.css">
 
-  <!-- Trade Hub selection -->
-  <label>
-    Trade Hub
-    <select id="hub_select" class="eve-input">
-      <option value="jita" selected>Jita</option>
-      <option value="amarr">Amarr</option>
-      <option value="rens">Rens</option>
-      <option value="hek">Hek</option>
-      <option value="dodixie">Dodixie</option>
-    </select>
-  </label>
+<div id="eve-reprocess-wrapper" class="erp-wrapper">
+
+  <!-- Trade Hub -->
+  <div class="erp-center">
+    <label class="eve-label">
+      Trade Hub
+      <select id="hub_select" class="eve-input">
+        <option value="jita" selected>Jita</option>
+        <option value="amarr">Amarr</option>
+        <option value="rens">Rens</option>
+        <option value="hek">Hek</option>
+        <option value="dodixie">Dodixie</option>
+      </select>
+    </label>
+  </div>
 
   <!-- Skills & Standings -->
-  <div class="eve-skills-columns">
-    <div class="eve-col eve-border-right">
+  <div id="skills_and_standings" class="erp-two-col">
+
+    <div class="erp-col erp-col--skills">
       <?php
         $skills = [
-          'Accounting' => 'skill_accounting',
-          'Broker Relations' => 'skill_broker',
+          'Accounting'                => 'skill_accounting',
+          'Broker Relations'          => 'skill_broker',
           'Advanced Broker Relations' => 'skill_broker_adv',
-          'Connections' => 'skill_connections',
-          'Criminal Connections' => 'skill_criminal',
-          'Diplomacy' => 'skill_diplomacy',
-          'Scrapmetal Processing' => 'skill_scrapmetal'
+          'Connections'               => 'skill_connections',
+          'Diplomacy'                 => 'skill_diplomacy',
+          'Scrapmetal Processing'     => 'skill_scrapmetal'
         ];
         foreach ($skills as $label => $id): ?>
-          <label>
+          <label class="eve-label">
             <?= $label ?>
             <select id="<?= $id ?>" class="eve-input">
               <?php for ($i = 0; $i <= 5; $i++): ?>
@@ -37,32 +41,34 @@
           </label>
       <?php endforeach; ?>
     </div>
-    <div class="eve-col">
-      <div id="standing_inputs_wrapper">
-        <label>
-          <span id="faction_label">Base Caldari State Standing</span>
-          <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00" />
-        </label>
-        <div id="faction_standing_result" class="output">Effective: 0.00</div>
-        <label>
-          <span id="corp_label">Base Caldari Navy Standing</span>
-          <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00" />
-        </label>
-        <div id="corp_standing_result" class="output">Effective: 0.00</div>
-      </div>
-      <div id="result_skills" class="eve-result-box"></div>
-      <div id="result_main" class="eve-result-box">
+
+    <div class="erp-col erp-col--standings">
+      <label class="eve-label">
+        <span id="faction_label">Base Caldari State Standing</span>
+        <input id="faction_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00">
+      </label>
+      <div id="faction_standing_result">Effective: 0.00</div>
+
+      <label class="eve-label">
+        <span id="corp_label">Base Caldari Navy Standing</span>
+        <input id="corp_standing_input" type="number" class="eve-input" step="0.001" min="-10" max="10" value="0.00">
+      </label>
+      <div id="corp_standing_result">Effective: 0.00</div>
+
+      <div id="result_skills"></div>
+      <div id="result_main">
         <div><strong>Brokerage Fee:</strong> <span id="broker_fee">0.00%</span></div>
         <div><strong>Reprocessing Tax:</strong> <span id="reprocess_tax">0.00%</span></div>
         <div><strong>Sales Tax:</strong> <span id="sales_tax">0.00%</span></div>
         <div><strong>Reprocessing Yield:</strong> <span id="reprocess_yield">50.00%</span></div>
       </div>
     </div>
+
   </div>
 
-  <!-- Market Group Filter -->
-  <div id="market_group_filter">
-    <label>
+  <!-- Filter Group & Toggles -->
+  <div class="erp-center erp-filter-group">
+    <label class="eve-label">
       Filter Market Group
       <select id="market_group_select" class="eve-input">
         <option value="11">Ammunition & Charges</option>
@@ -73,29 +79,21 @@
         <option value="955">Ship and Module Modifications</option>
       </select>
     </label>
-  </div>
-  
-  <div id="exclude_capital_wrapper">
-    <label for="exclude_capital"><b>Exclude Capital-Sized?</b>
+    <label id="exclude_capital_wrapper" class="eve-label">
+      Exclude Capital-Sized?
       <select id="exclude_capital" class="eve-input">
         <option value="yes" selected>Yes</option>
         <option value="no">No</option>
       </select>
     </label>
-  </div>
-
-  <div id="exclude_t1_wrapper" style="display:none;">
-    <label>
-      Exclude T1 Modules? (Meta only?)
+    <label id="exclude_t1_wrapper" class="eve-label" style="display:none;">
+      Exclude T1 Modules?
       <select id="exclude_t1" class="eve-input">
         <option value="yes" selected>Yes</option>
         <option value="no">No</option>
       </select>
     </label>
-  </div>
-
-  <div id="t2_toggle_wrapper">
-    <label>
+    <label class="eve-label">
       Include T2?
       <select id="include_t2" class="eve-input">
         <option value="yes" selected>Yes</option>
@@ -104,83 +102,83 @@
     </label>
   </div>
 
-  <button id="generate_btn" type="button" class="eve-btn">Generate List</button>
+  <!-- Generate List -->
+  <div class="erp-center">
+    <button id="generate_btn" class="eve-btn">Generate List</button>
+  </div>
 
-  <!-- Controls after list generation -->
-  <div id="after_generate_controls" style="display:none;">
-    <div id="secondary_trade_hub_wrapper">
-      <label>Include Secondary Trade Hubs?
-        <select id="include_secondary" class="eve-input">
-          <option value="yes" selected>Yes</option>
-          <option value="no">No</option>
-        </select>
-      </label>
+  <!-- After-Generation Controls -->
+  <div id="after_generate_controls">
+
+    <div class="erp-aftergen">
+      <div class="erp-col erp-col--aftergen-main">
+        <label class="eve-label">
+          Include Secondary Trade Hubs?
+          <select id="include_secondary" class="eve-input">
+            <option value="yes" selected>Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <label class="eve-label">
+          Sell To
+          <select id="sell_to_select" class="eve-input">
+            <option value="buy">Buy Orders</option>
+            <option value="sell" selected>Sell Orders</option>
+          </select>
+        </label>
+        <label class="eve-label">
+          Minimum Margin %
+          <input id="min_margin" type="number" class="eve-input" min="0" value="5" step="0.01">
+        </label>
+        <label class="eve-label">
+          Maximum Margin %
+          <input id="max_margin" type="number" class="eve-input" min="0" value="25" step="0.01">
+        </label>
+        <label class="eve-label">
+          Minimum Daily Volume
+          <input id="min_daily_volume" type="number" class="eve-input" min="1" value="1" step="1">
+        </label>
+        <label class="eve-label">
+          Stack Size
+          <input id="stack_size" type="number" class="eve-input" min="1" value="100" step="1">
+        </label>
+      </div>
+      <div class="erp-col erp-col--aftergen-side">
+        <label id="buy_qty_recommendation_wrapper" class="eve-label" style="display:none;">
+          Buy order QTY recommendation?
+          <select id="buy_qty_recommendation" class="eve-input">
+            <option value="no" selected>No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </label>
+        <label id="buy_qty_percentage_wrapper" class="eve-label" style="display:none;">
+          % of Daily Volume
+          <input id="buy_qty_percentage" type="number" class="eve-input" min="0" max="100" value="10" step="1">
+        </label>
+        <div id="relist_fees_wrapper" style="display:none;">
+          <label class="eve-label">
+            Re-list brokerage fees?
+            <select id="relist_broker_fees" class="eve-input">
+              <option value="no" selected>No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <label class="eve-label">
+            Order updates
+            <input id="order_updates" type="number" class="eve-input" min="1" value="5" step="1">
+          </label>
+        </div>
+      </div>
     </div>
-    <div id="sell_to_wrapper">
-      <label>Sell To
-        <select id="sell_to_select" class="eve-input">
-          <option value="buy">Buy Orders</option>
-          <option value="sell" selected>Sell Orders</option>
-        </select>
-      </label>
-    </div>
-    <div id="margin_fields_wrapper" style="display:none;">
-      <label>
-        Minimum Margin %
-        <input type="number" id="min_margin" class="eve-input" min="0" value="5" step="0.01" />
-      </label>
-      <label>
-        Maximum Margin %
-        <input type="number" id="max_margin" class="eve-input" min="0" value="25" step="0.01" />
-      </label>
-    </div>
-    <div id="min_daily_volume_wrapper">
-      <label>
-        Minimum Daily Volume
-        <input id="min_daily_volume" type="number" min="1" step="1" value="1" class="eve-input" />
-      </label>
-    </div>
-    <div id="stack_size_wrapper">
-      <label>
-        Stack Size
-        <input id="stack_size" type="number" min="1" step="1" value="100" class="eve-input" />
-      </label>
-    </div>
-    <div id="buy_qty_recommendation_wrapper" style="display:none;">
-      <label>Buy-order QTY recommendation?
-        <select id="buy_qty_recommendation" class="eve-input">
-          <option value="no" selected>No</option>
-          <option value="yes">Yes</option>
-        </select>
-      </label>
-    </div>
-    <div id="buy_qty_percentage_wrapper" style="display:none;">
-      <label>% of Daily Volume
-        <input id="buy_qty_percentage" type="number" min="0" max="100" step="1" value="10" class="eve-input" />
-      </label>
-    </div>
-    <!-- Relist Fee UI: Hidden by default, shown by JS when buy QTY is YES -->
-    <div id="relist_fees_wrapper" style="display:none;">
-      <label>
-        Re-list brokerage fees?
-        <select id="relist_broker_fees" class="eve-input">
-          <option value="no" selected>No</option>
-          <option value="yes">Yes</option>
-        </select>
-      </label>
-      <label>
-        Order updates
-        <input id="order_updates" type="number" min="1" step="1" value="1" class="eve-input" />
-      </label>
-    </div>
-    <div id="market_action_buttons">
-      <button id="generate_prices_btn" style="display:none;" type="button" class="eve-btn">Generate Prices</button>
-      <button id="copy_market_quickbar_btn" style="display:none;" type="button" class="eve-btn">Copy Market Quickbar</button>
+
+    <div class="erp-center erp-actions">
+      <button id="generate_prices_btn" class="eve-btn" style="display:none;">Generate Prices</button>
+      <button id="copy_market_quickbar_btn" class="eve-btn" style="display:none;">Copy Market Quickbar</button>
     </div>
   </div>
 
   <!-- Price Table -->
-  <div id="price_table_wrapper" style="display:none;">
+  <div id="price_table_wrapper" class="erp-center" style="display:none;">
     <table id="output_price_table" class="eve-reprocess-table">
       <thead>
         <tr>
@@ -194,16 +192,16 @@
     </table>
   </div>
 
-  <!-- Material & Item Breakdown -->
-  <div id="market_group_results_wrapper" style="display:none;">
+  <!-- Item Breakdown -->
+  <div id="market_group_results_wrapper" class="erp-breakdown" style="display:none;">
     <h3>Items in Selected Market Group</h3>
     <ul id="material_list_flat"></ul>
     <ul id="market_group_results"></ul>
   </div>
 
-  <!-- No Results Message -->
-  <div id="no_results_message" style="display:none;" class="eve-cache-error">
-    No profitable items within your filter parameters.<br />
+  <!-- No Results -->
+  <div id="no_results_message" class="erp-center erp-error" style="display:none;">
+    No profitable items within your filter parameters.<br>
     Try increasing stack size or widening margins.
   </div>
 
