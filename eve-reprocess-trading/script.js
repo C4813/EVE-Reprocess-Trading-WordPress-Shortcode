@@ -24,35 +24,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         relistFeesWrap: $('relist_fees_wrapper'), relistFees: $('relist_broker_fees'),
         orderUpdates: $('order_updates'),
         orderUpdatesWrap: $('order_updates_wrapper'),
-        skillBrokerAdv: $('skill_broker_adv')
+        skillBrokerAdv: $('skill_broker_adv'),
+        skill_accounting: $('skill_accounting'),
+        skill_broker: $('skill_broker'),
+        skill_connections: $('skill_connections'),
+        skill_diplomacy: $('skill_diplomacy'),
+        skill_scrapmetal: $('skill_scrapmetal')
     };
 
     // Show/hide helpers
     const hide = (...x) => x.forEach(e => e && (e.style.display = 'none'));
     const show = (...x) => x.forEach(e => e && (e.style.display = 'block'));
-
-    // --- Split hide logic for UI ---
+   
     function hideAllResultsBelowGenerateList() {
         hide(
             els.groupResultsWrap,
             els.genPrices, els.copyQuickbar, els.afterGen,
             els.tableWrap, els.marginWrap, els.noResults,
             els.minVol?.parentElement, els.stack?.parentElement,
-            els.buyQtyWrap, els.buyQtyPercWrap
+            els.buyQtyWrap, els.buyQtyPercWrap, els.orderUpdatesWrap // <-- add here!
         );
         genPricesBtnReset && genPricesBtnReset();
         needRegenerate = false;
+        updateOrderUpdatesVisibility();
     }
 
     function hideMarketGroupResultsOnly() {
         hide(
-            els.tableWrap,      // hides price table
-            els.copyQuickbar,   // hides quickbar button
-            els.noResults,      // hides no-results msg
-            els.groupResultsWrap // hides item/group list
+            els.tableWrap,
+            els.copyQuickbar,
+            els.noResults,
+            els.groupResultsWrap
         );
         setGenPricesBtnRegenerate && setGenPricesBtnRegenerate();
         needRegenerate = true;
+    }
+
+    // Central function for order updates visibility
+    function updateOrderUpdatesVisibility() {
+        const showOrderUpdates =
+            els.buyQty && els.buyQty.value === 'yes' &&
+            els.relistFees && els.relistFees.value === 'yes';
+        if (els.orderUpdatesWrap)
+            els.orderUpdatesWrap.style.display = showOrderUpdates ? 'block' : 'none';
     }
 
     // Utilities
@@ -78,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set initial defaults
     if (els.stack) els.stack.value = 100;
     if (els.t2Toggle) els.t2Toggle.value = "yes";
-    if (els.orderUpdates) els.orderUpdates.value = 5; // <--- add this line
+    if (els.orderUpdates) els.orderUpdates.value = 5;
     hide(els.minVol?.parentElement, els.stack?.parentElement, els.excludeT1Wrap, els.excludeCapWrap, els.buyQtyWrap, els.buyQtyPercWrap);
 
     // Always refresh adjusted prices cache (if needed)
@@ -123,8 +137,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event listeners for filters
     [
-        els.hub, els.factionIn, els.corpIn, $('skill_accounting'), $('skill_broker'), els.skillBrokerAdv, $('skill_connections'),
-        $('skill_diplomacy'), $('skill_scrapmetal'),
+        els.hub, els.factionIn, els.corpIn, els.skill_accounting, els.skill_broker, els.skillBrokerAdv, els.skill_connections,
+        els.skill_diplomacy, els.skill_scrapmetal,
         els.groupSel, els.t2Toggle, els.excludeT1, els.excludeCap
     ].forEach(el => el && el.addEventListener('input', () => {
         hideAllResultsBelowGenerateList();
@@ -137,28 +151,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.minVol, els.stack, els.buyQty, els.buyQtyPerc,
         els.relistFees, els.orderUpdates
     ].forEach(el => el && el.addEventListener('input', hideMarketGroupResultsOnly));
-    
-    // Also add change event for select specifically (for safety)
-    if (els.relistFees) els.relistFees.addEventListener('change', () => {
-        if (els.orderUpdatesWrap)
-            els.orderUpdatesWrap.style.display =
-                (els.buyQty && els.buyQty.value === 'yes' && els.relistFees.value === 'yes') ? 'block' : 'none';
-        hideMarketGroupResultsOnly();
-    });
-    if (els.orderUpdates) ['input','change'].forEach(evt =>
-        els.orderUpdates.addEventListener(evt, hideMarketGroupResultsOnly)
-    );
 
-    // Buy QTY logic (also runs hideMarketGroupResultsOnly)
+    // --- Buy QTY and Relist Fee logic: show/hide + update order updates visibility ---
     if (els.buyQty) els.buyQty.addEventListener('change', () => {
         els.buyQtyPercWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
         if (els.relistFeesWrap)
             els.relistFeesWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
-        if (els.orderUpdatesWrap)
-            els.orderUpdatesWrap.style.display =
-                (els.buyQty.value === 'yes' && els.relistFees && els.relistFees.value === 'yes') ? 'block' : 'none';
+        updateOrderUpdatesVisibility();
         hideMarketGroupResultsOnly();
     });
+
+    if (els.relistFees) els.relistFees.addEventListener('change', () => {
+        updateOrderUpdatesVisibility();
+        hideMarketGroupResultsOnly();
+    });
+
     if (els.buyQtyPerc) {
         ['input','blur'].forEach(evt => els.buyQtyPerc.addEventListener(evt, () => {
             sanitize(els.buyQtyPerc, {min:0, max:100, def:10});
@@ -172,14 +179,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (els.minMargin) ['input','blur'].forEach(e=>els.minMargin.addEventListener(e,()=>sanitize(els.minMargin,{def:5})));
     if (els.maxMargin) ['input','blur'].forEach(e=>els.maxMargin.addEventListener(e,()=>sanitize(els.maxMargin,{def:25})));
 
-    // UI buttons state
+    // UI buttons state (safe DOM, no innerHTML for user-data)
     function genPricesBtnReset() {
-        els.genPrices.innerHTML = `<span class="btn-text">Generate Prices</span>`;
+        els.genPrices.textContent = ""; // Clear all children
+        const span = document.createElement('span');
+        span.className = "btn-text";
+        span.textContent = "Generate Prices";
+        els.genPrices.appendChild(span);
         els.genPrices.disabled = false;
         els.genPrices.classList.remove('loading');
     }
     function setGenPricesBtnRegenerate() {
-        els.genPrices.innerHTML = `<span class="btn-text">Regenerate List & Prices</span>`;
+        els.genPrices.textContent = "";
+        const span = document.createElement('span');
+        span.className = "btn-text";
+        span.textContent = "Regenerate List & Prices";
+        els.genPrices.appendChild(span);
         els.genPrices.disabled = false;
         els.genPrices.classList.remove('loading');
     }
@@ -229,7 +244,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updateMarketGroupResults() {
         els.generate.disabled = true;
         els.generate.classList.add('loading');
-        els.generate.innerHTML = `<span class="spinner"></span><span class="btn-text">List Generating<br><small>This may take several seconds<br>Do not refresh the page</small></span>`;
+        els.generate.textContent = "";
+        const spinner = document.createElement('span');
+        spinner.className = "spinner";
+        const span = document.createElement('span');
+        span.className = "btn-text";
+        span.innerHTML = 'List Generating<br><small>This may take several seconds<br>Do not refresh the page</small>';
+        els.generate.appendChild(spinner);
+        els.generate.appendChild(span);
 
         requestAnimationFrame(() => {
             setTimeout(() => {
@@ -269,10 +291,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         itemBreakdown.push({ name, components });
                     });
 
-                els.groupResults.innerHTML = '';
+                // Clear groupResults list safely
+                while (els.groupResults.firstChild) els.groupResults.removeChild(els.groupResults.firstChild);
                 if (!itemBreakdown.length) {
                     const li = document.createElement('li');
-                    li.innerHTML = '<em>No items found for this group</em>';
+                    const em = document.createElement('em');
+                    em.textContent = "No items found for this group";
+                    li.appendChild(em);
                     els.groupResults.appendChild(li);
                 } else {
                     itemBreakdown.forEach(item => {
@@ -283,11 +308,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         els.groupResults.appendChild(li);
                     });
                 }
+                // Clear matList safely
+                while (els.matList.firstChild) els.matList.removeChild(els.matList.firstChild);
                 const materialList = Array.from(materialSet).sort();
-                els.matList.innerHTML = '';
                 if (!materialList.length) {
                     const li = document.createElement('li');
-                    li.innerHTML = '<em>No materials found</em>';
+                    const em = document.createElement('em');
+                    em.textContent = "No materials found";
+                    li.appendChild(em);
                     els.matList.appendChild(li);
                 } else {
                     materialList.forEach(name => {
@@ -308,12 +336,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 needRegenerate = false;
                 els.generate.disabled = false;
                 els.generate.classList.remove('loading');
-                els.generate.innerHTML = `<span class="btn-text">Generate List</span>`;
+                els.generate.textContent = "";
+                const genSpan = document.createElement('span');
+                genSpan.className = "btn-text";
+                genSpan.textContent = "Generate List";
+                els.generate.appendChild(genSpan);
             }, 10);
         });
     }
 
-    // Generate Prices logic
+    // Generate Prices logic -- [use safe DOM only]
     let currentMaterialPrices = {}, currentSellPrices = {}, currentVolumes = {};
     els.genPrices.addEventListener('click', async () => {
         if (needRegenerate) {
@@ -363,12 +395,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (els.noResults) hide(els.noResults);
         els.genPrices.disabled = true;
         els.genPrices.classList.add('loading');
-        els.genPrices.innerHTML = `<span class="spinner"></span><span class="btn-text">Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small></span>`;
+        els.genPrices.textContent = "";
+        const spinner = document.createElement('span');
+        spinner.className = "spinner";
+        const span = document.createElement('span');
+        span.className = "btn-text";
+        span.innerHTML = 'Prices Generating<br><small>This may take several minutes<br>Do not refresh the page</small>';
+        els.genPrices.appendChild(spinner);
+        els.genPrices.appendChild(span);
 
         let minMargin = els.minMargin ? sanitize(els.minMargin, {def:5}) : 5;
         let maxMargin = els.maxMargin ? sanitize(els.maxMargin, {def:25}) : 25;
         let minDailyVolume = els.minVol ? sanitize(els.minVol, {min:1,def:1}) : 1;
-        let stackSize = els.stack ? sanitize(els.stack, {min:1,def:100}) : 100;
+        let stackSize = els.stack ? sanitize(els.stack,{min:1,def:100}) : 100;
         const { enabled: buyQtyEnabled, percent: buyQtyPercent } = getBuyQtySettings();
         const sellTo = els.sellTo?.value || 'buy';
 
@@ -482,7 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ) {
                     const updates = parseInt(els.orderUpdates.value);
                     const advBrokerLvl = parseInt(els.skillBrokerAdv?.value || 0);
-                    const brokerFee = brokerageFeeRate; // Already decimal, eg. 0.03
+                    const brokerFee = brokerageFeeRate;
                     let orderValue = itemBuyPrice;
                     for (let u = 0; u < updates; ++u) {
                         const newOrderValue = getNextOrderValue(orderValue, 5);
@@ -531,7 +570,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         })();
     }
 
-    // Quickbar Copy
+    // Quickbar Copy (still safe: only textContent)
     els.copyQuickbar.addEventListener('click', () => {
         const selectedGroup = els.groupSel.options[els.groupSel.selectedIndex]?.text || 'Unknown Group';
         const visibleItems = Array.from(els.groupResults.querySelectorAll('li'))
@@ -552,20 +591,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         const quickbar = `+ ${selectedGroup}\n${quickbarItems.join('\n')}`;
         navigator.clipboard.writeText(quickbar).then(() => {
-            els.copyQuickbar.innerHTML = '<span class="btn-text">Copied!</span>';
+            els.copyQuickbar.textContent = "Copied!";
             setTimeout(() => {
-                els.copyQuickbar.innerHTML = '<span class="btn-text">Copy Market Quickbar</span>';
+                els.copyQuickbar.textContent = "Copy Market Quickbar";
             }, 1500);
         });
     });
 
     // Skills calculation & results
     function updateResults() {
-        const accounting = parseFloat($('skill_accounting')?.value || 0);
-        const broker = parseFloat($('skill_broker')?.value || 0);
-        const conn = parseFloat($('skill_connections')?.value || 0);
-        const diplo = parseFloat($('skill_diplomacy')?.value || 0);
-        const scrap = parseFloat($('skill_scrapmetal')?.value || 0);
+        const accounting = parseFloat(els.skill_accounting?.value || 0);
+        const broker = parseFloat(els.skill_broker?.value || 0);
+        const conn = parseFloat(els.skill_connections?.value || 0);
+        const diplo = parseFloat(els.skill_diplomacy?.value || 0);
+        const scrap = parseFloat(els.skill_scrapmetal?.value || 0);
 
         let baseFaction = parseFloat(els.factionIn?.value || 0);
         let baseCorp = parseFloat(els.corpIn?.value || 0);
@@ -592,27 +631,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
 
+        // --- Effective boxes ---
         els.factionRes.textContent = '';
-        const em = document.createElement('em');
-        em.textContent = 'Effective:';
-        els.factionRes.appendChild(em);
+        const strong = document.createElement('strong');
+        strong.textContent = 'Effective:';
+        els.factionRes.appendChild(strong);
         els.factionRes.appendChild(document.createTextNode(' ' + factionEffClamped.toFixed(2)));
-        
+
         els.corpRes.textContent = '';
-        const em2 = document.createElement('em');
-        em2.textContent = 'Effective:';
-        els.corpRes.appendChild(em2);
+        const strong2 = document.createElement('strong');
+        strong2.textContent = 'Effective:';
+        els.corpRes.appendChild(strong2);
         els.corpRes.appendChild(document.createTextNode(' ' + corpEffClamped.toFixed(2)));
 
-        els.skillsBox.style.display = 'block';
-        els.skillsBox.innerHTML = '';
-        const mk = (lbl, val) => {
-            const d = document.createElement('div'), s = document.createElement('strong'), i = document.createElement('i');
-            s.textContent = lbl; d.appendChild(s); d.appendChild(document.createElement('br'));
-            i.textContent = val; d.appendChild(i); return d;
-        };
-        els.skillsBox.appendChild(mk('Skill Used (Faction)', baseFaction < 0 ? 'Diplomacy' : 'Connections'));
-        els.skillsBox.appendChild(mk('Skill Used (Corp)', baseCorp < 0 ? 'Diplomacy' : 'Connections'));
+        // --- Skills Used Box (shrink-wrapped) ---
+        // Clear any existing
+        while (els.skillsBox.firstChild) els.skillsBox.removeChild(els.skillsBox.firstChild);
+
+        // Wrapper div for shrink-wrapping
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'inline-block';
+        wrapper.style.width = 'max-content';
+        wrapper.style.textAlign = 'center';
+        wrapper.style.margin = '0 auto';
+
+        // Helper to create each skill row
+        function mkRow(label, value) {
+            const row = document.createElement('div');
+            row.style.display = 'block';
+            row.style.textAlign = 'center';
+            const strong = document.createElement('strong');
+            strong.textContent = label;
+            const br = document.createElement('br');
+            const em = document.createElement('em');
+            em.textContent = value;
+            row.appendChild(strong);
+            row.appendChild(br);
+            row.appendChild(em);
+            return row;
+        }
+
+        wrapper.appendChild(mkRow('Skill Used (Faction)', baseFaction < 0 ? 'Diplomacy' : 'Connections'));
+        wrapper.appendChild(mkRow('Skill Used (Corp)', baseCorp < 0 ? 'Diplomacy' : 'Connections'));
+
+        els.skillsBox.appendChild(wrapper);
+
+        // --- Fee and yield boxes ---
         els.brokerFee.textContent = `${brokerFee.toFixed(2)}%`;
         els.tax.textContent = `${reprocessTax.toFixed(2)}%`;
         els.salesTax.textContent = `${salesTax.toFixed(2)}%`;
@@ -640,5 +704,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     hideAllResultsBelowGenerateList();
     updateFiltersVisibility();
     genPricesBtnReset();
+    updateOrderUpdatesVisibility();
     updateResults();
 });
