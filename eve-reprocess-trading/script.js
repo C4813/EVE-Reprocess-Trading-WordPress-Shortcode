@@ -20,7 +20,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         excludeT1Wrap: $('exclude_t1_wrapper'), excludeCap: $('exclude_capital'),
         excludeCapWrap: $('exclude_capital_wrapper'), noResults: $('no_results_message'),
         buyQtyWrap: $('buy_qty_recommendation_wrapper'), buyQty: $('buy_qty_recommendation'),
-        buyQtyPercWrap: $('buy_qty_percentage_wrapper'), buyQtyPerc: $('buy_qty_percentage')
+        buyQtyPercWrap: $('buy_qty_percentage_wrapper'), buyQtyPerc: $('buy_qty_percentage'),
+        relistFeesWrap: $('relist_fees_wrapper'), relistFees: $('relist_broker_fees'),
+        orderUpdates: $('order_updates'),
+        skillBrokerAdv: $('skill_broker_adv')
     };
 
     // Show/hide helpers
@@ -42,7 +45,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function hideMarketGroupResultsOnly() {
         hide(
-            els.tableWrap, els.copyQuickbar, els.noResults
+            els.tableWrap,      // hides price table
+            els.copyQuickbar,   // hides quickbar button
+            els.noResults,      // hides no-results msg
+            els.groupResultsWrap // hides item/group list
         );
         setGenPricesBtnRegenerate && setGenPricesBtnRegenerate();
         needRegenerate = true;
@@ -115,23 +121,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event listeners for filters
     [
-        els.hub, els.factionIn, els.corpIn, $('skill_accounting'), $('skill_broker'), $('skill_connections'),
+        els.hub, els.factionIn, els.corpIn, $('skill_accounting'), $('skill_broker'), els.skillBrokerAdv, $('skill_connections'),
         $('skill_criminal'), $('skill_diplomacy'), $('skill_scrapmetal'),
         els.groupSel, els.t2Toggle, els.excludeT1, els.excludeCap
     ].forEach(el => el && el.addEventListener('input', () => {
         hideAllResultsBelowGenerateList();
-        hide(els.minVol?.parentElement, els.stack?.parentElement, els.buyQtyWrap, els.buyQtyPercWrap);
+        hide(els.minVol?.parentElement, els.stack?.parentElement, els.buyQtyWrap, els.buyQtyPercWrap, els.relistFeesWrap);
         updateFiltersVisibility();
     }));
 
     [
         els.includeSec, els.sellTo, els.minMargin, els.maxMargin,
-        els.minVol, els.stack, els.buyQty, els.buyQtyPerc
+        els.minVol, els.stack, els.buyQty, els.buyQtyPerc,
+        els.relistFees, els.orderUpdates
     ].forEach(el => el && el.addEventListener('input', hideMarketGroupResultsOnly));
+    
+    // Also add change event for select specifically (for safety)
+    if (els.relistFees) els.relistFees.addEventListener('change', hideMarketGroupResultsOnly);
+    if (els.orderUpdates) ['input','change'].forEach(evt =>
+        els.orderUpdates.addEventListener(evt, hideMarketGroupResultsOnly)
+    );
 
     // Buy QTY logic (also runs hideMarketGroupResultsOnly)
     if (els.buyQty) els.buyQty.addEventListener('change', () => {
         els.buyQtyPercWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
+        if (els.relistFeesWrap)
+            els.relistFeesWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
         hideMarketGroupResultsOnly();
     });
     if (els.buyQtyPerc) {
@@ -317,6 +332,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.copyQuickbar.style.display = visibleItems.length ? 'inline-block' : 'none';
     }
 
+    function getNextOrderValue(current, steps = 5) {
+        if (!current) return 0;
+        const abs = Math.abs(current);
+        const sig = Math.floor(Math.log10(abs));
+        const step = Math.pow(10, sig - 3);
+        let v = Math.round(current / step) * step + steps * step;
+        const factor = Math.pow(10, sig - 3);
+        return Math.round(v / factor) * factor;
+    }
+    
+    function calculateRelistFee(oldValue, newValue, brokerFeeRate, advBrokerLvl) {
+        const first = (1 - (0.50 + 0.06 * advBrokerLvl)) * brokerFeeRate * newValue;
+        const second = brokerFeeRate * Math.max(newValue - oldValue, 0);
+        const total = Math.max(first + second, 100);
+        return total;
+    }
+
     function runGeneratePrices() {
         if (els.noResults) hide(els.noResults);
         els.genPrices.disabled = true;
@@ -431,6 +463,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (sellTo === 'buy') yieldAfterFees = yieldAfterFees * (1 - salesTaxRate);
                 else if (sellTo === 'sell') yieldAfterFees = yieldAfterFees * (1 - brokerageFeeRate) * (1 - salesTaxRate);
                 yieldAfterFees -= itemBrokerage;
+                
+                let relistFeeTotal = 0;
+                if (
+                    els.buyQty && els.buyQty.value === 'yes' &&
+                    els.relistFees && els.relistFees.value === 'yes' &&
+                    els.orderUpdates && !isNaN(parseInt(els.orderUpdates.value)) && parseInt(els.orderUpdates.value) > 0
+                ) {
+                    const updates = parseInt(els.orderUpdates.value);
+                    const advBrokerLvl = parseInt(els.skillBrokerAdv?.value || 0);
+                    const brokerFee = brokerageFeeRate; // Already decimal, eg. 0.03
+                    let orderValue = itemBuyPrice;
+                    for (let u = 0; u < updates; ++u) {
+                        const newOrderValue = getNextOrderValue(orderValue, 5);
+                        const fee = calculateRelistFee(orderValue, newOrderValue, brokerFee, advBrokerLvl);
+                        relistFeeTotal += fee;
+                        orderValue = newOrderValue;
+                    }
+                    yieldAfterFees -= relistFeeTotal;
+                }
 
                 let qtyDisplay = volume;
                 if (buyQtyEnabled) qtyDisplay = Math.round(volume * buyQtyPercent);
