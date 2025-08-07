@@ -173,12 +173,12 @@
       </div>
     </div>
 
-    <!-- Move buttons OUTSIDE .erp-aftergen here: -->
     <div class="erp-center erp-actions">
-      <button id="generate_prices_btn" class="eve-btn" style="display:none;">Generate Prices</button>
-      <button id="copy_market_quickbar_btn" class="eve-btn" style="display:none;">Copy Market Quickbar</button>
+        <button id="generate_prices_btn" class="eve-btn" style="display:none;">Generate Prices</button>
     </div>
-  </div>
+    <div class="erp-center" id="quickbar-btn-wrapper" style="margin-top:12px;">
+        <button id="copy_market_quickbar_btn" class="eve-btn" style="display:none;">Copy Market Quickbar</button>
+    </div>
 
   <!-- Price Table -->
   <div id="price_table_wrapper" class="erp-center" style="display:none;">
