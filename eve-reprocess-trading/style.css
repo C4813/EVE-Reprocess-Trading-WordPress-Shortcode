@@ -1,119 +1,210 @@
-/* ===== EVE Reprocess Unified Style (Reduced) ===== */
-
 :root {
-  --primary-bg: #fff;
-  --primary-border: #ccc;
-  --highlight-bg: #f2f2f2;
-  --result-bg: #f7f7fa;
-  --primary-radius: 8px;
-  --primary-font: inherit;
   --input-width: 220px;
   --input-height: 42px;
-  --select-arrow: url("data:image/svg+xml;utf8,<svg fill='gray' height='18' viewBox='0 0 20 20' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M5.5 8.5l4.5 4.5 4.5-4.5' stroke='gray' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>");
+  --box-bg: #f7f7fa;
+  --box-radius: 8px;
+  --box-vertical-padding: 8px;
+  --box-horizontal-padding: 16px;
+  --gap: 24px;
+  --border: 1px solid #bbb;
 }
 
-/* ROOT WRAPPER */
-.eve-reprocess-wrapper {
+.erp-wrapper {
   max-width: 900px;
   margin: 0 auto;
-  font-family: var(--primary-font);
+  padding: 32px 16px;
   text-align: center;
-  padding: 16px 0 32px 0;
+  font-family: inherit;
 }
 
-/* FLEX LAYOUT FOR SKILL/STANDING FIELDS */
-.eve-skills-columns {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-}
-.eve-col {
-  flex: 1 1 0;
-  max-width: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.eve-border-right {
-  border-right: 2px solid var(--primary-border);
-  padding-right: 20px;
+.erp-center {
+  text-align: center;
+  margin-bottom: var(--gap);
 }
 
-/* LABELS & FIELDS */
-label {
-  font-weight: bold;
-  margin: 12px 0 4px 0;
+/* Skills & main standings two-col + centered divider */
+.erp-two-col {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative;
   width: 100%;
-  gap: 5px;
-  text-align: center;
+  align-items: flex-start;
+  gap: 40px;
+  margin-bottom: var(--gap);
 }
-
-/* UNIFORM USER INPUTS */
-.eve-input {
-  width: var(--input-width);
-  max-width: 100%;
-  height: var(--input-height);
-  font-size: 16px;
-  border: 1px solid var(--primary-border);
-  border-radius: var(--primary-radius);
-  text-align: center;
-  margin-top: 7px;
+.erp-two-col::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #ccc;
+}
+.erp-col {
+  flex: 0 0 calc((100% - 40px)/2);
   box-sizing: border-box;
-  background: var(--primary-bg);
-  outline: none;
-  transition: border-color 0.2s;
+  min-width: 0;
 }
-select.eve-input {
-  background-image: var(--select-arrow);
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 22px 22px;
-  appearance: none;
-  padding-right: 38px;
-  cursor: pointer;
+.erp-col:not(:last-child) {
+  padding-right: var(--gap);
+}
+.erp-col:not(:first-child) {
+  padding-left: var(--gap);
 }
 
-/* BUTTONS */
+/* Labels & inputs */
+.eve-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.eve-input {
+  box-sizing: border-box;
+  display: block;
+  width: var(--input-width);
+  max-width: 95vw;
+  height: var(--input-height);
+  margin: 0 auto var(--gap) auto;
+  padding: 0 10px;
+  font-size: 16px;
+  text-align: center;
+  border: var(--border);
+  border-radius: var(--box-radius);
+}
+
+/* Filter & after-gen labels spacing */
+.erp-filter-group .eve-label,
+.erp-aftergen .eve-label {
+  margin-bottom: var(--gap);
+}
+
+/* Hide outer until JS toggles / show after-gen container below */
+#after_generate_controls {
+  display: none;
+  margin-bottom: var(--gap);
+}
+
+/* After-gen two-col + divider */
+.erp-aftergen {
+  display: flex;
+  position: relative;
+  width: 100%;
+  align-items: flex-start;
+  gap: 40px;
+  margin-bottom: var(--gap);
+}
+.erp-aftergen::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #ccc;
+}
+.erp-col--aftergen-main {
+  flex: 0 0 calc((100% - 40px)/2);
+  box-sizing: border-box;
+  min-width: 0;
+  padding-right: var(--gap);
+}
+.erp-col--aftergen-side {
+  flex: 0 0 calc((100% - 40px)/2);
+  box-sizing: border-box;
+  min-width: 0;
+  padding-left: var(--gap);
+}
+
+/* Buttons row beneath after-gen */
+.erp-actions {
+  margin-top: var(--gap);
+}
+
+/* Result boxes: shrink-wrap, centered */
+#result_main,
+#faction_standing_result,
+#corp_standing_result {
+  background: var(--box-bg);
+  padding: var(--box-vertical-padding) var(--box-horizontal-padding);
+  border-radius: var(--box-radius);
+  margin: 4px auto 16px;
+  display: inline-block;
+  text-align: center;
+  width: auto;
+}
+
+/* Skills Used box: shrink-wrap to its contents, on its own line */
+#result_skills {
+  display: inline-block;
+  width: auto;
+  margin: 4px auto 16px;
+  background: var(--box-bg);
+  padding: var(--box-vertical-padding) var(--box-horizontal-padding);
+  border-radius: var(--box-radius);
+  text-align: center;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Optionally, fee/tax/yield box minimum width for a consistent look */
+#result_main {
+  min-width: 240px;
+  display: block;
+}
+
+
+
+/* Tables & breakdown */
+#market_group_results_wrapper {
+  display: none;
+  margin-top: var(--gap);
+  text-align: left;
+}
+.eve-reprocess-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto var(--gap) auto;
+}
+.eve-reprocess-table th,
+.eve-reprocess-table td {
+  border: var(--border);
+  padding: 8px;
+  text-align: center;
+}
+
+/* Error message */
+.erp-error {
+  color: #c0392b;
+  font-weight: bold;
+  margin-top: var(--gap);
+  text-align: center;
+}
+
+/* Buttons & spinner */
 .eve-btn {
   font-size: 18px;
   font-weight: bold;
   padding: 12px 30px;
   border: none;
-  border-radius: var(--primary-radius);
+  border-radius: var(--box-radius);
   background-color: #444;
   color: #fff;
   cursor: pointer;
-  margin: 18px auto 0 auto;
   box-shadow: 0 2px 8px rgba(60,60,60,0.04);
-  transition: background 0.2s, transform 0.12s, min-width 0.2s;
-  outline: none;
+  transition: background 0.2s, transform 0.12s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 180px;
-  max-width: 90vw;
-  width: auto;
   white-space: normal;
+  margin: var(--gap) auto 0 auto;
 }
-.eve-btn:active { transform: scale(0.96);}
-.eve-btn:hover { background: #222;}
-.eve-btn:disabled {background: #888; cursor: not-allowed;}
-.eve-cache-clear-btn { background: #c0392b; }
-.eve-cache-clear-btn:hover { background: #a93226; }
-
-#market_action_buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-  width: auto !important;
+.eve-btn:hover { background: #222; }
+.eve-btn:active { transform: scale(0.96); }
+.eve-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
 }
-
-/* Spinner for loading state */
 .spinner {
   display: inline-block;
   width: 16px;
@@ -125,149 +216,17 @@ select.eve-input {
   vertical-align: middle;
   margin-right: 6px;
 }
-@keyframes spin {to { transform: rotate(360deg);}}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* FILTERS & BUTTON WRAPPERS */
-#after_generate_controls, 
-#market_group_filter, 
-#exclude_t1_wrapper, 
-#t2_toggle_wrapper,
-#min_daily_volume_wrapper, 
-#stack_size_wrapper,
-#margin_fields_wrapper, 
-#market_action_buttons,
-#secondary_trade_hub_wrapper,
-#sell_to_wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 12px auto 0 auto;
-  width: 100%;
+/* Clear cache button */
+.eve-cache-clear-btn {
+  background-color: #c0392b;
 }
-#after_generate_controls > div,
-#market_group_filter,
-#exclude_t1_wrapper,
-#t2_toggle_wrapper {
-  margin-bottom: 10px;
-}
-#after_generate_controls > div:not(:last-child) { margin-bottom: 12px; }
-
-/* FIELD LABEL STACKING FIX */
-#after_generate_controls label,
-#market_group_filter label,
-#exclude_t1_wrapper label,
-#t2_toggle_wrapper label,
-#min_daily_volume_wrapper label,
-#stack_size_wrapper label,
-#margin_fields_wrapper label,
-.eve-skills-columns label {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  gap: 5px;
-  width: 100%;
-  text-align: center;
-  margin: 0;
+.eve-cache-clear-btn:hover {
+  background-color: #a93226;
 }
 
-/* TABLES */
-.eve-reprocess-table {
-  margin: 30px auto 0;
-  border-collapse: collapse;
-  width: 100%;
-}
-.eve-reprocess-table th,
-.eve-reprocess-table td {
-  border: 1px solid var(--primary-border);
-  padding: 8px;
-  text-align: center;
-  vertical-align: middle;
-}
-.eve-reprocess-table th {
-  font-weight: bold;
-}
-
-/* RESULTS BOX */
-.eve-result-box {
-  background: var(--result-bg);
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 14px;
-  display: inline-block;
-  text-align: center;
-  max-width: 280px;
-  margin-top: 10px;
-  box-shadow: 0 1px 4px rgba(60,60,60,0.07);
-}
-.output {
-  width: var(--input-width);
-  min-height: var(--input-height);
-  background-color: var(--highlight-bg);
-  padding: 6px 12px;
-  border-radius: var(--primary-radius);
-  margin: 6px auto;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* GENERAL LIST STYLING */
-#market_group_results_wrapper {
+/* Hide flat material list */
+#material_list_flat {
   display: none;
-  margin-top: 20px;
-  max-width: 900px;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: left;
 }
-#market_group_results {
-  list-style-type: disc;
-  margin: 10px auto;
-  padding-left: 20px;
-  max-width: 900px;
-  font-size: 14px;
-}
-#market_group_results li { margin: 4px 0; }
-#material_list_flat { display: none; }
-
-/* NO RESULTS / SUCCESS / ERROR MESSAGES */
-#no_results_message,
-.eve-cache-success {
-  color: #27ae60;
-  font-weight: bold;
-  margin-top: 20px;
-  text-align: center;
-}
-.eve-cache-error {
-  color: #c0392b;
-  font-weight: bold;
-  margin-top: 10px;
-  text-align: center;
-}
-
-/* QTY Percentage */
-#buy_qty_percentage_wrapper label,
-#buy_qty_percentage_wrapper input,
-#buy_qty_percentage_wrapper span {
-  vertical-align: middle;
-}
-#buy_qty_percentage_wrapper input.eve-input {
-  margin-right: 0.2em;
-}
-
-/* RESPONSIVE DESIGN */
-@media (max-width: 700px) {
-  .eve-skills-columns { flex-direction: column; align-items: center; }
-  .eve-border-right {border-right: none; padding-right: 0;}
-  .eve-col {max-width: 100%; width: 100%;}
-  .eve-result-box, .output, .eve-input, select.eve-input { max-width: 98vw; width: 98vw; }
-  .eve-reprocess-table {font-size: 13px;}
-}
-@media (max-width: 520px) {
-  .eve-input, select.eve-input, input[type="number"].eve-input {width: 98vw; min-width: 0;}
-  .eve-result-box {max-width: 99vw;}
-  .output {width: 99vw;}
-}
-
-/* ===== END EVE Reprocess Style (Reduced) ===== */
