@@ -7,6 +7,7 @@
   --box-horizontal-padding: 16px;
   --gap: 24px;
   --border: 1px solid #bbb;
+  --result-font-size: 15px;
 }
 
 .erp-wrapper {
@@ -17,13 +18,36 @@
   font-family: inherit;
 }
 
-.erp-center {
+.erp-center,
+.eve-label {
   text-align: center;
-  margin-bottom: var(--gap);
 }
 
-/* Skills & main standings two-col + centered divider */
-.erp-two-col {
+.erp-center {
+  text-align: center;
+}
+
+/* Columns and divider */
+.erp-col,
+.erp-col--aftergen-main,
+.erp-col--aftergen-side {
+  flex: 0 0 calc((100% - 40px)/2);
+  box-sizing: border-box;
+  min-width: 0;
+  text-align: center;
+}
+
+.erp-col:not(:last-child),
+.erp-col--aftergen-main {
+  padding-right: var(--gap);
+}
+.erp-col:not(:first-child),
+.erp-col--aftergen-side {
+  padding-left: var(--gap);
+}
+
+.erp-two-col,
+.erp-aftergen {
   display: flex;
   position: relative;
   width: 100%;
@@ -31,7 +55,8 @@
   gap: 40px;
   margin-bottom: var(--gap);
 }
-.erp-two-col::before {
+.erp-two-col::before,
+.erp-aftergen::before {
   content: "";
   position: absolute;
   left: 50%;
@@ -40,24 +65,12 @@
   width: 1px;
   background: #ccc;
 }
-.erp-col {
-  flex: 0 0 calc((100% - 40px)/2);
-  box-sizing: border-box;
-  min-width: 0;
-}
-.erp-col:not(:last-child) {
-  padding-right: var(--gap);
-}
-.erp-col:not(:first-child) {
-  padding-left: var(--gap);
-}
 
 /* Labels & inputs */
 .eve-label {
   display: block;
   font-weight: bold;
   margin-bottom: 8px;
-  text-align: center;
 }
 .eve-input {
   box-sizing: border-box;
@@ -68,9 +81,9 @@
   margin: 0 auto var(--gap) auto;
   padding: 0 10px;
   font-size: 16px;
-  text-align: center;
   border: var(--border);
   border-radius: var(--box-radius);
+  text-align: center;
 }
 
 /* Filter & after-gen labels spacing */
@@ -79,81 +92,55 @@
   margin-bottom: var(--gap);
 }
 
-/* Hide outer until JS toggles / show after-gen container below */
-#after_generate_controls {
-  display: none;
-  margin-bottom: var(--gap);
+/* Small gap below standings inputs only */
+#faction_standing_input,
+#corp_standing_input {
+  margin-bottom: 6px;
 }
 
-/* After-gen two-col + divider */
-.erp-aftergen {
-  display: flex;
-  position: relative;
-  width: 100%;
-  align-items: flex-start;
-  gap: 40px;
-  margin-bottom: var(--gap);
-}
-.erp-aftergen::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: #ccc;
-}
-.erp-col--aftergen-main {
-  flex: 0 0 calc((100% - 40px)/2);
-  box-sizing: border-box;
-  min-width: 0;
-  padding-right: var(--gap);
-}
-.erp-col--aftergen-side {
-  flex: 0 0 calc((100% - 40px)/2);
-  box-sizing: border-box;
-  min-width: 0;
-  padding-left: var(--gap);
-}
-
-/* Buttons row beneath after-gen */
-.erp-actions {
-  margin-top: var(--gap);
+/* Unified result/skills box font size */
+#faction_standing_result,
+#corp_standing_result,
+#result_skills,
+#result_main {
+  font-size: var(--result-font-size);
 }
 
 /* Result boxes: shrink-wrap, centered */
 #result_main,
 #faction_standing_result,
-#corp_standing_result {
-  background: var(--box-bg);
-  padding: var(--box-vertical-padding) var(--box-horizontal-padding);
-  border-radius: var(--box-radius);
-  margin: 4px auto 16px;
-  display: inline-block;
-  text-align: center;
-  width: auto;
-}
-
-/* Skills Used box: shrink-wrap to its contents, on its own line */
+#corp_standing_result,
 #result_skills {
   display: inline-block;
   width: auto;
-  margin: 4px auto 16px;
+  min-width: 0;
+  max-width: 100%;
   background: var(--box-bg);
   padding: var(--box-vertical-padding) var(--box-horizontal-padding);
   border-radius: var(--box-radius);
-  text-align: center;
+  margin: 4px auto 16px;
   box-sizing: border-box;
-  max-width: 100%;
 }
 
-/* Optionally, fee/tax/yield box minimum width for a consistent look */
-#result_main {
-  min-width: 240px;
-  display: block;
+/* Hide outer until JS toggles / show after-gen container below */
+#after_generate_controls {
+  width: 100%;
 }
 
-
+.erp-center.erp-actions,
+.erp-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: var(--gap);
+  text-align: center;
+}
+.erp-actions .eve-btn {
+  display: inline-block;
+  margin: 0 10px;
+  vertical-align: middle;
+}
 
 /* Tables & breakdown */
 #market_group_results_wrapper {
@@ -193,11 +180,9 @@
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(60,60,60,0.04);
   transition: background 0.2s, transform 0.12s;
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: normal;
-  margin: var(--gap) auto 0 auto;
 }
 .eve-btn:hover { background: #222; }
 .eve-btn:active { transform: scale(0.96); }
@@ -229,4 +214,28 @@
 /* Hide flat material list */
 #material_list_flat {
   display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 850px) {
+  .erp-two-col,
+  .erp-aftergen {
+    flex-direction: column;
+    gap: 0;
+  }
+  .erp-two-col::before,
+  .erp-aftergen::before {
+    display: none;
+  }
+  .erp-col,
+  .erp-col--aftergen-main,
+  .erp-col--aftergen-side {
+    padding: 0 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+#generate_btn {
+  margin-bottom: var(--gap);
 }
