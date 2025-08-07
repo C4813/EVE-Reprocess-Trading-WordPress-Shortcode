@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         buyQtyPercWrap: $('buy_qty_percentage_wrapper'), buyQtyPerc: $('buy_qty_percentage'),
         relistFeesWrap: $('relist_fees_wrapper'), relistFees: $('relist_broker_fees'),
         orderUpdates: $('order_updates'),
+        orderUpdatesWrap: $('order_updates_wrapper'),
         skillBrokerAdv: $('skill_broker_adv')
     };
 
@@ -77,6 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set initial defaults
     if (els.stack) els.stack.value = 100;
     if (els.t2Toggle) els.t2Toggle.value = "yes";
+    if (els.orderUpdates) els.orderUpdates.value = 5; // <--- add this line
     hide(els.minVol?.parentElement, els.stack?.parentElement, els.excludeT1Wrap, els.excludeCapWrap, els.buyQtyWrap, els.buyQtyPercWrap);
 
     // Always refresh adjusted prices cache (if needed)
@@ -122,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event listeners for filters
     [
         els.hub, els.factionIn, els.corpIn, $('skill_accounting'), $('skill_broker'), els.skillBrokerAdv, $('skill_connections'),
-        $('skill_criminal'), $('skill_diplomacy'), $('skill_scrapmetal'),
+        $('skill_diplomacy'), $('skill_scrapmetal'),
         els.groupSel, els.t2Toggle, els.excludeT1, els.excludeCap
     ].forEach(el => el && el.addEventListener('input', () => {
         hideAllResultsBelowGenerateList();
@@ -137,7 +139,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     ].forEach(el => el && el.addEventListener('input', hideMarketGroupResultsOnly));
     
     // Also add change event for select specifically (for safety)
-    if (els.relistFees) els.relistFees.addEventListener('change', hideMarketGroupResultsOnly);
+    if (els.relistFees) els.relistFees.addEventListener('change', () => {
+        if (els.orderUpdatesWrap)
+            els.orderUpdatesWrap.style.display =
+                (els.buyQty && els.buyQty.value === 'yes' && els.relistFees.value === 'yes') ? 'block' : 'none';
+        hideMarketGroupResultsOnly();
+    });
     if (els.orderUpdates) ['input','change'].forEach(evt =>
         els.orderUpdates.addEventListener(evt, hideMarketGroupResultsOnly)
     );
@@ -147,6 +154,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.buyQtyPercWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
         if (els.relistFeesWrap)
             els.relistFeesWrap.style.display = els.buyQty.value === 'yes' ? 'block' : 'none';
+        if (els.orderUpdatesWrap)
+            els.orderUpdatesWrap.style.display =
+                (els.buyQty.value === 'yes' && els.relistFees && els.relistFees.value === 'yes') ? 'block' : 'none';
         hideMarketGroupResultsOnly();
     });
     if (els.buyQtyPerc) {
@@ -582,12 +592,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const salesTax = 7.5 * (1 - (0.11 * accounting));
         const yieldPercent = 50 * (1 + 0.02 * scrap);
 
-        els.factionRes.textContent = `Effective: ${factionEffClamped.toFixed(2)}`;
-        els.corpRes.textContent = `Effective: ${corpEffClamped.toFixed(2)}`;
-        els.brokerFee.textContent = `${brokerFee.toFixed(2)}%`;
-        els.tax.textContent = `${reprocessTax.toFixed(2)}%`;
-        els.salesTax.textContent = `${salesTax.toFixed(2)}%`;
-        els.yield.textContent = `${yieldPercent.toFixed(2)}%`;
+        els.factionRes.textContent = '';
+        const em = document.createElement('em');
+        em.textContent = 'Effective:';
+        els.factionRes.appendChild(em);
+        els.factionRes.appendChild(document.createTextNode(' ' + factionEffClamped.toFixed(2)));
+        
+        els.corpRes.textContent = '';
+        const em2 = document.createElement('em');
+        em2.textContent = 'Effective:';
+        els.corpRes.appendChild(em2);
+        els.corpRes.appendChild(document.createTextNode(' ' + corpEffClamped.toFixed(2)));
 
         els.skillsBox.style.display = 'block';
         els.skillsBox.innerHTML = '';
@@ -598,6 +613,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         els.skillsBox.appendChild(mk('Skill Used (Faction)', baseFaction < 0 ? 'Diplomacy' : 'Connections'));
         els.skillsBox.appendChild(mk('Skill Used (Corp)', baseCorp < 0 ? 'Diplomacy' : 'Connections'));
+        els.brokerFee.textContent = `${brokerFee.toFixed(2)}%`;
+        els.tax.textContent = `${reprocessTax.toFixed(2)}%`;
+        els.salesTax.textContent = `${salesTax.toFixed(2)}%`;
+        els.yield.textContent = `${yieldPercent.toFixed(2)}%`;
     }
 
     els.hub.addEventListener('change', () => {
@@ -618,8 +637,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('select, input[type="number"]').forEach(el => el.addEventListener('input', updateResults));
 
     // Initial UI state
-    updateResults();
     hideAllResultsBelowGenerateList();
     updateFiltersVisibility();
     genPricesBtnReset();
+    updateResults();
 });
