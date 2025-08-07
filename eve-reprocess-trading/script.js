@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         factionIn: $('faction_standing_input'), corpIn: $('corp_standing_input'),
         factionRes: $('faction_standing_result'), corpRes: $('corp_standing_result'),
         brokerFee: $('broker_fee'), tax: $('reprocess_tax'), salesTax: $('sales_tax'), yield: $('reprocess_yield'),
-        groupSel: $('market_group_select'), t2Toggle: $('include_t2'),
+        groupSel: $('market_group_select'), t2Toggle: $('exclude_t2'),
         marginWrap: $('margin_fields_wrapper'), minMargin: $('min_margin'), maxMargin: $('max_margin'),
         minVol: $('min_daily_volume'), stack: $('stack_size'), excludeT1: $('exclude_t1'),
         excludeT1Wrap: $('exclude_t1_wrapper'), excludeCap: $('exclude_capital'),
@@ -221,9 +221,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     function hasValidMetaGroup(typeID) {
         const entry = metaTypes[typeID];
-        const includeT2 = els.t2Toggle?.value || "no";
+        const excludeT2 = els.t2Toggle?.value || "no";
         if (entry === undefined || entry === null) return true;
-        return includeT2 === "yes" ? (entry === 1 || entry === 2) : entry === 1;
+        return excludeT2 === "yes" ? (entry === 1) : (entry === 1 || entry === 2);
     }
     function isCapitalItem(item) {
         if (!item || !item.marketGroupID) return false;
