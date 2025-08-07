@@ -94,10 +94,10 @@
       </select>
     </label>
     <label class="eve-label">
-      Include T2?
-      <select id="include_t2" class="eve-input">
-        <option value="yes" selected>Yes</option>
-        <option value="no">No</option>
+      Exclude T2?
+      <select id="exclude_t2" class="eve-input">
+        <option value="yes">Yes</option>
+        <option value="no" selected>No</option>
       </select>
     </label>
   </div>
