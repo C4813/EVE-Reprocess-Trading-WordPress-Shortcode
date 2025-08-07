@@ -4,18 +4,17 @@ Adds a shortcode `[eve_reprocess_trading]` to display a tool for calculating rep
 
 A secondary shortcode `[eve_reprocess_clear_cache]` can be used to display a button which forcibly clears the cache. It will be visible only to administrators (with WordPress `manage_options` capability).
 
-This plugin is designed to replace and enhance my current [EVE Reprocessing Master 2.0.1 spreadsheet](https://docs.google.com/spreadsheets/d/13WKDTn-dqjOnJ2HG1KWYh4hZ8Pxv87vWsUtC65It5Mw/edit?usp=sharing) 🔗
+This plugin is designed to replace and enhance my current [EVE Reprocessing Master 2.0.1 spreadsheet](https://docs.google.com/spreadsheets/d/13WKDTn-dqjOnJ2HG1KWYh4hZ8Pxv87vWsUtC65It5Mw/edit?usp=sharing) 🔗 which is not up to date with the current version of EVE Online.
 
-## Version 0.7.1 Features
+## Key Features
 
 - [x] Trade Hub selection
   - [x] Secondary Trade Hub consideration (Perimeter/Ashab/Frarn/Nakugard/Botane)
 - [x] Skill and standing consideration (for sales tax, brokerage, and reprocessing fees)
-- [x] Sell to buy orders, or sell orders options
+- [x] Sell to buy orders, or sell orders consideration
 - [x] Margin filter (set minimum/maximum margin)
-- [x] Enable/Disable meta level 2 items (T2 modules/ships etc.) or capital-sized items
-- [x] Percentage of daily volume option for the quickbar. (Instead of just showing the daily volume, show a user-defined percentage of that number to aid in speed of creating orders)
-- [x] Re-list calculations
+- [x] Exclude T1 (show blueprint-less 'meta' only), Capital-Sized, and T2.
+- [x] Market Quickbar import tool
 
 ### Caches refresh with updated prices independently:
 - Adjusted price data if the cache is greater than 24 hours old
