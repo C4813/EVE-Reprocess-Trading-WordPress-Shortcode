@@ -1,4 +1,4 @@
-<?php /* template.php (Reduced) */ ?>
+<?php /* template.php (Updated with Adv Broker & Relist Fees) */ ?>
 <div class="eve-reprocess-wrapper">
 
   <!-- Trade Hub selection -->
@@ -20,6 +20,7 @@
         $skills = [
           'Accounting' => 'skill_accounting',
           'Broker Relations' => 'skill_broker',
+          'Advanced Broker Relations' => 'skill_broker_adv',
           'Connections' => 'skill_connections',
           'Criminal Connections' => 'skill_criminal',
           'Diplomacy' => 'skill_diplomacy',
@@ -156,6 +157,20 @@
     <div id="buy_qty_percentage_wrapper" style="display:none;">
       <label>% of Daily Volume
         <input id="buy_qty_percentage" type="number" min="0" max="100" step="1" value="10" class="eve-input" />
+      </label>
+    </div>
+    <!-- Relist Fee UI: Hidden by default, shown by JS when buy QTY is YES -->
+    <div id="relist_fees_wrapper" style="display:none;">
+      <label>
+        Re-list brokerage fees?
+        <select id="relist_broker_fees" class="eve-input">
+          <option value="no" selected>No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </label>
+      <label>
+        Order updates
+        <input id="order_updates" type="number" min="1" step="1" value="1" class="eve-input" />
       </label>
     </div>
     <div id="market_action_buttons">
