@@ -163,6 +163,8 @@
               <option value="yes">Yes</option>
             </select>
           </label>
+        </div>
+        <div id="order_updates_wrapper" style="display:none;">
           <label class="eve-label">
             Order updates
             <input id="order_updates" type="number" class="eve-input" min="1" value="5" step="1">
@@ -171,6 +173,7 @@
       </div>
     </div>
 
+    <!-- Move buttons OUTSIDE .erp-aftergen here: -->
     <div class="erp-center erp-actions">
       <button id="generate_prices_btn" class="eve-btn" style="display:none;">Generate Prices</button>
       <button id="copy_market_quickbar_btn" class="eve-btn" style="display:none;">Copy Market Quickbar</button>
