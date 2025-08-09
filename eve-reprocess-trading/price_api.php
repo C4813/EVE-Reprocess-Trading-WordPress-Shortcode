@@ -4,10 +4,26 @@ require_once dirname(__DIR__, 3) . '/wp-load.php';
 if (!defined('ABSPATH')) {
     header('HTTP/1.1 403 Forbidden');
     http_response_code(403);
+    header('Content-Type: application/json');
     echo json_encode(['error' => 'Not in WP context']);
     exit;
 }
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Cross-Origin-Resource-Policy: same-origin');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+
+// Require nonce for POST to mitigate CSRF / cross-site abuse
+if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $nonce = $_SERVER['HTTP_X_WP_NONCE'] ?? '';
+    if (!wp_verify_nonce($nonce, 'ert_api')) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Bad nonce']);
+        exit;
+    }
+}
 
 // --- Utility for JSON output & errors ---
 function json_die($data, $code = 200) {
@@ -17,7 +33,16 @@ function json_die($data, $code = 200) {
 }
 
 // --- Config & Validate Input ---
-$input = json_decode(file_get_contents('php://input'), true);
+$inputRaw = file_get_contents('php://input');
+$input = [];
+if ($inputRaw !== false && $inputRaw !== '') {
+    $input = json_decode($inputRaw, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON payload'], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+}
 $hubs = [
     'jita'    => ['region'=>10000002,'primary'=>30000142,'secondary'=>30000144],
     'amarr'   => ['region'=>10000043,'primary'=>30002187,'secondary'=>30003491],
@@ -38,14 +63,20 @@ foreach ($requestNames as $n)
         json_die(['error'=>"Invalid material name: $n"], 400);
 
 // --- Data, Paths, and Cache ---
-$region_id      = $hubs[$hub]['region'];
-$primary_sys_id = $hubs[$hub]['primary'];
+$region_id        = $hubs[$hub]['region'];
+$primary_sys_id   = $hubs[$hub]['primary'];
 $secondary_sys_id = $hubs[$hub]['secondary'];
 $invTypes = json_decode(file_get_contents(__DIR__ . '/invTypes.json'), true);
+// Only keep materials that exist in invTypes to avoid useless ESI calls
+$requestNames = array_values(array_filter($requestNames, function($n) use ($invTypes) {
+    return isset($invTypes[$n]['typeID']);
+}));
+if (!$requestNames) json_die(['error' => 'No valid materials'], 400);
 
 $up = wp_upload_dir();
-$cache_dir = trailingslashit($up['basedir']) . 'eve-reprocess-trading/cache/';
-if (!is_dir($cache_dir)) mkdir($cache_dir, 0755, true);
+$base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+$cache_dir = $base_dir . 'cache/';
+if (!is_dir($cache_dir)) wp_mkdir_p($cache_dir);
 
 $map_file = $cache_dir . 'location_system_map.json';
 $system_map = is_file($map_file) ? json_decode(file_get_contents($map_file), true) : [];
@@ -92,15 +123,15 @@ function resolve_system_id($loc, &$map, $pri, $sec, $scope) {
     return $map[$loc] = $info['system_id'] ?? null;
 }
 function fetch_orders($region, $typeID) {
-    $orders=[]; $page=1;
+    $orders = []; $page = 1; $maxPages = 10;
     do {
         $u = "https://esi.evetech.net/latest/markets/{$region}/orders/?order_type=all&type_id={$typeID}&page={$page}";
         $j = fetch_json($u);
         if (!is_array($j) || empty($j)) break;
-        $orders = array_merge($orders,$j);
+        $orders = array_merge($orders, $j);
         $page++;
         usleep(200000);
-    } while (count($j)===1000);
+    } while (count($j) === 1000 && $page <= $maxPages);
     return $orders;
 }
 
@@ -130,8 +161,9 @@ foreach ($toFetch as $name) {
         : 0;
 }
 
-// --- Save updated system map ---
-file_put_contents($map_file, json_encode($system_map));
+// --- Save updated system map (locked) ---
+@file_put_contents($map_file, json_encode($system_map, JSON_UNESCAPED_SLASHES), LOCK_EX);
+@chmod($map_file, 0640);
 
 // --- Save chunks ---
 function save_chunks($prefix, $cache, $limit=150) {
@@ -147,12 +179,12 @@ function save_chunks($prefix, $cache, $limit=150) {
         foreach($chunks as $i=>$set){
             $arr=['buy'=>[],'sell'=>[],'volumes'=>[]];
             foreach($set as $m){
-                if(isset($cache['buy'][$m]))   $arr['buy'][$m]=$cache['buy'][$m];
-                if(isset($cache['sell'][$m]))  $arr['sell'][$m]=$cache['sell'][$m];
+                if(isset($cache['buy'][$m]))    $arr['buy'][$m]=$cache['buy'][$m];
+                if(isset($cache['sell'][$m]))   $arr['sell'][$m]=$cache['sell'][$m];
                 if(isset($cache['volumes'][$m]))$arr['volumes'][$m]=$cache['volumes'][$m];
             }
             $file = "{$prefix}_".($i+1).".json";
-            file_put_contents($file,json_encode($arr),LOCK_EX);
+            file_put_contents($file,json_encode($arr, JSON_UNESCAPED_SLASHES),LOCK_EX);
             @chmod($file,0640);
         }
         flock($lock,LOCK_UN);
@@ -169,5 +201,5 @@ foreach($requestNames as $n){
     $reply['volumes'][$n] = $volumes[$n] ?? 0;
 }
 
-echo json_encode($reply);
+echo json_encode($reply, JSON_UNESCAPED_SLASHES);
 exit;
