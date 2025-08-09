@@ -1,6 +1,3 @@
-<?php /* template.php */ ?>
-<link rel="stylesheet" href="style.css">
-
 <div id="eve-reprocess-wrapper" class="erp-wrapper">
 
   <!-- Trade Hub -->
@@ -32,8 +29,8 @@
         ];
         foreach ($skills as $label => $id): ?>
           <label class="eve-label">
-            <?= $label ?>
-            <select id="<?= $id ?>" class="eve-input">
+            <?= esc_html($label) ?>
+            <select id="<?= esc_attr($id) ?>" class="eve-input">
               <?php for ($i = 0; $i <= 5; $i++): ?>
                 <option value="<?= $i ?>"<?= $i === 5 ? ' selected' : '' ?>><?= $i ?></option>
               <?php endfor; ?>
@@ -86,7 +83,7 @@
         <option value="no">No</option>
       </select>
     </label>
-    <label id="exclude_t1_wrapper" class="eve-label" style="display:none;">
+    <label id="exclude_t1_wrapper" class="eve-label hidden">
       Exclude T1 Modules?
       <select id="exclude_t1" class="eve-input">
         <option value="yes" selected>Yes</option>
@@ -144,18 +141,18 @@
         </label>
       </div>
       <div class="erp-col erp-col--aftergen-side">
-        <label id="buy_qty_recommendation_wrapper" class="eve-label" style="display:none;">
+        <label id="buy_qty_recommendation_wrapper" class="eve-label hidden">
           Buy order QTY recommendation?
           <select id="buy_qty_recommendation" class="eve-input">
             <option value="no" selected>No</option>
             <option value="yes">Yes</option>
           </select>
         </label>
-        <label id="buy_qty_percentage_wrapper" class="eve-label" style="display:none;">
+        <label id="buy_qty_percentage_wrapper" class="eve-label hidden">
           % of Daily Volume
           <input id="buy_qty_percentage" type="number" class="eve-input" min="0" max="100" value="10" step="1">
         </label>
-        <div id="relist_fees_wrapper" style="display:none;">
+        <div id="relist_fees_wrapper" class="hidden">
           <label class="eve-label">
             Re-list brokerage fees?
             <select id="relist_broker_fees" class="eve-input">
@@ -164,7 +161,7 @@
             </select>
           </label>
         </div>
-        <div id="order_updates_wrapper" style="display:none;">
+        <div id="order_updates_wrapper" class="hidden">
           <label class="eve-label">
             Order updates
             <input id="order_updates" type="number" class="eve-input" min="1" value="5" step="1">
@@ -174,36 +171,20 @@
     </div>
 
     <div class="erp-center erp-actions">
-        <button id="generate_prices_btn" class="eve-btn" style="display:none;">Generate Prices</button>
+        <button id="generate_prices_btn" class="eve-btn hidden">Generate Prices</button>
     </div>
-    <div class="erp-center" id="quickbar-btn-wrapper" style="margin-top:12px;">
-        <button id="copy_market_quickbar_btn" class="eve-btn" style="display:none;">Copy Market Quickbar</button>
+    <div class="erp-center mt-12" id="quickbar-btn-wrapper">
+        <button id="copy_market_quickbar_btn" class="eve-btn hidden">Copy Market Quickbar</button>
     </div>
-
-  <!-- Price Table -->
-  <div id="price_table_wrapper" class="erp-center" style="display:none;">
-    <table id="output_price_table" class="eve-reprocess-table">
-      <thead>
-        <tr>
-          <th>Mineral</th>
-          <th>Buy Price</th>
-          <th>Sell Price</th>
-          <th id="region_volume_header">Daily Volume</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
 
   <!-- Item Breakdown -->
-  <div id="market_group_results_wrapper" class="erp-breakdown" style="display:none;">
+  <div id="market_group_results_wrapper" class="erp-breakdown hidden">
     <h3>Items in Selected Market Group</h3>
-    <ul id="material_list_flat"></ul>
     <ul id="market_group_results"></ul>
   </div>
 
   <!-- No Results -->
-  <div id="no_results_message" class="erp-center erp-error" style="display:none;">
+  <div id="no_results_message" class="erp-center erp-error hidden">
     No profitable items within your filter parameters.<br>
     Try increasing stack size or widening margins.
   </div>
