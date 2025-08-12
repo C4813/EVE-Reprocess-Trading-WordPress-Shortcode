@@ -2,14 +2,16 @@
 /*
 Plugin Name: EVE Reprocess Trading
 Description: Displays trade hub mineral prices, brokerage and tax estimates based on skills and standings.
-Version: 1.0
+Version: 2.0
 Author: C4813
 */
 
 defined('ABSPATH') || exit;
 
+
+require_once __DIR__ . '/inc/ert-utils.php';
 if (!defined('ERT_VERSION')) {
-    define('ERT_VERSION', '1.0');
+    define('ERT_VERSION', '2.0');
 }
 
 function ert_plugin_path(): string { return plugin_dir_path(__FILE__); }
@@ -81,16 +83,64 @@ add_shortcode('eve_reprocess_clear_cache', function() {
         $deleted = true;
     }
 
-    ob_start(); ?>
+    ob_start(); 
+// --- First-run adjusted prices cache builder ---
+add_action('init', function () {
+    if (!function_exists('wp_upload_dir')) return;
+    $up = wp_upload_dir();
+    $base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+    $cache_dir = $base_dir . 'cache/';
+    // If cache dir or first chunk is missing, kick the builder once (non-blocking best-effort)
+    $first_chunk = $cache_dir . 'adjusted_prices_1.json';
+    if (!file_exists($first_chunk)) {
+        $url = plugins_url('adjusted_prices.php?refresh=1', __FILE__);
+        // fire and forget
+        wp_remote_get($url, ['timeout' => 5, 'blocking' => false, 'sslverify' => false]);
+    }
+}, 20);
+
+?>
     <form method="post" class="mt-24">
-        <?php wp_nonce_field('eve_reprocess_clear_cache_action', 'eve_reprocess_clear_cache_nonce'); ?>
+        <?php wp_nonce_field('eve_reprocess_clear_cache_action', 'eve_reprocess_clear_cache_nonce'); 
+// --- First-run adjusted prices cache builder ---
+add_action('init', function () {
+    if (!function_exists('wp_upload_dir')) return;
+    $up = wp_upload_dir();
+    $base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+    $cache_dir = $base_dir . 'cache/';
+    // If cache dir or first chunk is missing, kick the builder once (non-blocking best-effort)
+    $first_chunk = $cache_dir . 'adjusted_prices_1.json';
+    if (!file_exists($first_chunk)) {
+        $url = plugins_url('adjusted_prices.php?refresh=1', __FILE__);
+        // fire and forget
+        wp_remote_get($url, ['timeout' => 5, 'blocking' => false, 'sslverify' => false]);
+    }
+}, 20);
+
+?>
         <button type="submit" name="eve_reprocess_clear_cache"
             class="eve-btn eve-cache-clear-btn"
             onclick="return confirm('Are you sure you want to clear the plugin cache?');">
             Clear ESI Cache
         </button>
     </form>
-    <?php if ($deleted): ?>
+    <?php if ($deleted): 
+// --- First-run adjusted prices cache builder ---
+add_action('init', function () {
+    if (!function_exists('wp_upload_dir')) return;
+    $up = wp_upload_dir();
+    $base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+    $cache_dir = $base_dir . 'cache/';
+    // If cache dir or first chunk is missing, kick the builder once (non-blocking best-effort)
+    $first_chunk = $cache_dir . 'adjusted_prices_1.json';
+    if (!file_exists($first_chunk)) {
+        $url = plugins_url('adjusted_prices.php?refresh=1', __FILE__);
+        // fire and forget
+        wp_remote_get($url, ['timeout' => 5, 'blocking' => false, 'sslverify' => false]);
+    }
+}, 20);
+
+?>
         <div class="eve-cache-success">All plugin caches cleared!</div>
     <?php endif;
     return ob_get_clean();
