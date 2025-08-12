@@ -1,6 +1,122 @@
 <?php
-require_once dirname(__DIR__, 3) . '/wp-load.php';
 
+// ---- DEBUG/DIAGNOSTICS (top) ----
+error_reporting(E_ALL);
+ini_set('display_errors','0');
+if (!function_exists('ert_log_path')) {
+    function ert_log_path() {
+        if (function_exists('wp_upload_dir')) {
+            $up = wp_upload_dir();
+            $base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+            if (!is_dir($base_dir)) @wp_mkdir_p($base_dir);
+            return $base_dir . 'price_api_error.log';
+        }
+        return __DIR__ . '/price_api_error.log';
+    }
+}
+if (!function_exists('ert_log')) {
+    function ert_log($msg) { @file_put_contents(ert_log_path(), '['.date('c').'] '.$msg.PHP_EOL, FILE_APPEND); }
+}
+set_error_handler(function($severity, $message, $file, $line) {
+    ert_log("PHP Error ($severity) $message at $file:$line");
+    return false;
+});
+set_exception_handler(function($ex){
+    ert_log("Uncaught Exception: " . $ex->getMessage() . " at " . $ex->getFile() . ':' . $ex->getLine());
+    http_response_code(500);
+    echo json_encode(['error'=>'server exception','detail'=>$ex->getMessage()]);
+    exit;
+});
+register_shutdown_function(function(){
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ert_log("Fatal: {$e['message']} at {$e['file']}:{$e['line']}");
+        if (!headers_sent()) {
+            http_response_code(500);
+            echo json_encode(['error'=>'server fatal','detail'=>$e['message']]);
+        }
+    }
+});
+// ---- END DEBUG ----
+
+// Robust WordPress bootstrap: walk up until we find wp-load.php
+$__ert_root = __DIR__;
+$__ert_tried = [];
+for ($__i = 0; $__i < 8; $__i++) {
+    $candidate = $__ert_root . '/wp-load.php';
+    $__ert_tried[] = $candidate;
+    if (is_file($candidate)) { require_once $candidate; break; }
+    $__ert_root = dirname($__ert_root);
+}
+if (!defined('ABSPATH')) {
+    http_response_code(500);
+    echo json_encode(['error'=>'wp-load.php not found','tried'=>$__ert_tried], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+require_once __DIR__ . '/inc/ert-bootstrap.php';
+require_once __DIR__ . '/inc/ert-utils.php';
+
+// ---- DEBUG/DIAGNOSTICS (bootstrap) ----
+error_reporting(E_ALL);
+ini_set('display_errors','0');
+
+if (!function_exists('ert_log_path')) {
+    function ert_log_path() {
+        if (function_exists('wp_upload_dir')) {
+            $up = wp_upload_dir();
+            $base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+            if (!is_dir($base_dir)) @wp_mkdir_p($base_dir);
+            return $base_dir . 'price_api_error.log';
+        }
+        return __DIR__ . '/price_api_error.log';
+    }
+}
+if (!function_exists('ert_log')) {
+    function ert_log($msg) {
+        $line = '[' . date('c') . '] ' . $msg . PHP_EOL;
+        @file_put_contents(ert_log_path(), $line, FILE_APPEND);
+    }
+}
+
+set_error_handler(function($severity, $message, $file, $line) {
+    ert_log("PHP Error ($severity) $message at $file:$line");
+    return false;
+});
+set_exception_handler(function($ex){
+    ert_log("Uncaught Exception: " . $ex->getMessage() . " at " . $ex->getFile() . ':' . $ex->getLine());
+    http_response_code(500);
+    echo json_encode(['error'=>'server exception','detail'=>$ex->getMessage()]);
+    exit;
+});
+register_shutdown_function(function(){
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ert_log("Fatal: {$e['message']} at {$e['file']}:{$e['line']}");
+        if (!headers_sent()) {
+            http_response_code(500);
+            echo json_encode(['error'=>'server fatal','detail'=>$e['message']]);
+        }
+    }
+});
+// ---- END DEBUG ----
+
+
+
+
+// Robust WordPress bootstrap: walk up until we find wp-load.php
+$__ert_root = __DIR__;
+$__ert_tried = [];
+for ($__i = 0; $__i < 8; $__i++) {
+    $candidate = $__ert_root . '/wp-load.php';
+    $__ert_tried[] = $candidate;
+    if (is_file($candidate)) { require_once $candidate; break; }
+    $__ert_root = dirname($__ert_root);
+}
+if (!defined('ABSPATH')) {
+    http_response_code(500);
+    echo json_encode(['error'=>'wp-load.php not found','tried'=>$__ert_tried], JSON_UNESCAPED_SLASHES);
+    exit;
+}
 if (!defined('ABSPATH')) {
     header('HTTP/1.1 403 Forbidden');
     http_response_code(403);
@@ -11,6 +127,49 @@ if (!defined('ABSPATH')) {
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
+// (moved to top)
+error_reporting(E_ALL);
+ini_set('display_errors','0');
+
+function ert_log_path() {
+    if (function_exists('wp_upload_dir')) {
+        $up = wp_upload_dir();
+        $base_dir  = trailingslashit($up['basedir']) . 'eve-reprocess-trading/';
+        if (!is_dir($base_dir)) @wp_mkdir_p($base_dir);
+        return $base_dir . 'price_api_error.log';
+    }
+    return __DIR__ . '/price_api_error.log';
+}
+
+function ert_log($msg) {
+    $line = '[' . date('c') . '] ' . $msg . PHP_EOL;
+    @file_put_contents(ert_log_path(), $line, FILE_APPEND);
+}
+
+set_error_handler(function($severity, $message, $file, $line) {
+    ert_log("PHP Error ($severity) $message at $file:$line");
+    return false; // let normal handlers run too
+});
+
+set_exception_handler(function($ex){
+    ert_log("Uncaught Exception: " . $ex->getMessage() . " at " . $ex->getFile() . ':' . $ex->getLine());
+    http_response_code(500);
+    echo json_encode(['error'=>'server exception','detail'=>$ex->getMessage()]);
+    exit;
+});
+
+register_shutdown_function(function(){
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ert_log("Fatal: {$e['message']} at {$e['file']}:{$e['line']}");
+        if (!headers_sent()) {
+            http_response_code(500);
+            echo json_encode(['error'=>'server fatal','detail'=>$e['message']]);
+        }
+    }
+});
+// ---- END DEBUG ----
+
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Cross-Origin-Resource-Policy: same-origin');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
@@ -66,7 +225,8 @@ foreach ($requestNames as $n)
 $region_id        = $hubs[$hub]['region'];
 $primary_sys_id   = $hubs[$hub]['primary'];
 $secondary_sys_id = $hubs[$hub]['secondary'];
-$invTypes = json_decode(file_get_contents(__DIR__ . '/invTypes.json'), true);
+$invTypes = json_decode(file_get_contents(__DIR__ . '/data/invTypes.json'), true);
+if (!is_array($invTypes)) { json_die(['error' => 'invTypes.json missing or invalid at ' . (__DIR__ . '/data/invTypes.json')], 500);}
 // Only keep materials that exist in invTypes to avoid useless ESI calls
 $requestNames = array_values(array_filter($requestNames, function($n) use ($invTypes) {
     return isset($invTypes[$n]['typeID']);
@@ -82,7 +242,7 @@ $map_file = $cache_dir . 'location_system_map.json';
 $system_map = is_file($map_file) ? json_decode(file_get_contents($map_file), true) : [];
 
 $cache_prefix = $cache_dir . "esi_cache_{$hub}_{$scope}";
-$ttl = 86400;
+$ttl = 21600;
 
 // --- Merge cache chunks ---
 $cache = ['buy'=>[],'sell'=>[],'volumes'=>[]];
@@ -163,7 +323,7 @@ foreach ($toFetch as $name) {
 
 // --- Save updated system map (locked) ---
 @file_put_contents($map_file, json_encode($system_map, JSON_UNESCAPED_SLASHES), LOCK_EX);
-@chmod($map_file, 0640);
+chmod($map_file, 0644);
 
 // --- Save chunks ---
 function save_chunks($prefix, $cache, $limit=150) {
@@ -185,7 +345,7 @@ function save_chunks($prefix, $cache, $limit=150) {
             }
             $file = "{$prefix}_".($i+1).".json";
             file_put_contents($file,json_encode($arr, JSON_UNESCAPED_SLASHES),LOCK_EX);
-            @chmod($file,0640);
+            @chmod($file, 0644);
         }
         flock($lock,LOCK_UN);
         fclose($lock);
