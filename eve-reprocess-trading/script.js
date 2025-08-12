@@ -1,4 +1,33 @@
 document.addEventListener('DOMContentLoaded', async () => {
+
+// --- Helper: return set of mineral names for a given typeID from REPROCESS_YIELD ---
+function getReprocessMineralNames(tid, nameByTypeId) {
+  const minerals = new Set();
+  try {
+    const raw = (typeof REPROCESS_YIELD !== 'undefined' && REPROCESS_YIELD && REPROCESS_YIELD[tid]) || null;
+    if (!raw) return minerals;
+    if (Array.isArray(raw)) {
+      for (const m of raw) {
+        if (!m) continue;
+        const mtid = (m.typeID ?? m.typeId ?? m.id) | 0;
+        if (!mtid) continue;
+        const mname = m.name || nameByTypeId.get(mtid);
+        if (mname) minerals.add(mname);
+      }
+    } else if (typeof raw === 'object') {
+      for (const k of Object.keys(raw)) {
+        const mtid = k | 0;
+        if (!mtid) continue;
+        const mname = nameByTypeId.get(mtid);
+        if (mname) minerals.add(mname);
+      }
+    }
+  } catch (e) {
+    console.warn('getReprocessMineralNames failed', e);
+  }
+  return minerals;
+}
+
   // DOM shortcut
   const $ = id => document.getElementById(id);
 
@@ -149,10 +178,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Data load using plugin/ uploads base from PHP
   let [invTypes, marketGroups, reprocessYields, metaTypes] = await Promise.all([
-    fetchJSON(EVE_DATA.baseUrl + 'invTypes.json'),
-    fetchJSON(EVE_DATA.baseUrl + 'marketGroups.json'),
-    fetchJSON(EVE_DATA.baseUrl + 'reprocess_yield.json'),
-    fetchJSON(EVE_DATA.baseUrl + 'invMetaTypes.json'),
+    fetchJSON(EVE_DATA.baseUrl + 'data/invTypes.json'),
+    fetchJSON(EVE_DATA.baseUrl + 'data/marketGroups.json'),
+    fetchJSON(EVE_DATA.baseUrl + 'data/reprocess_yield.json'),
+    fetchJSON(EVE_DATA.baseUrl + 'data/invMetaTypes.json'),
   ]);
 
   let adjustedPricesArray = await (async function() {
@@ -569,8 +598,40 @@ wireStandingInput(els.corpIn);
         });
       });
       filteredItemNames.forEach(n => materialsNeeded.delete(n));
-      const allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
-      const materialBatches = [];
+      let allNames = [...filteredItemNames, ...Array.from(materialsNeeded)];
+ 
+/* MATERIALS_UNION (data-driven) */
+try {
+  // Ensure we have invTypes and reprocess maps in memory; fetch if not
+  if (typeof INV_TYPES === 'undefined' || !INV_TYPES) {
+    INV_TYPES = await fetchJSON(EVE_DATA.baseUrl + 'data/invTypes.json');
+  }
+  if (typeof REPROCESS_YIELD === 'undefined' || !REPROCESS_YIELD) {
+    REPROCESS_YIELD = await fetchJSON(EVE_DATA.baseUrl + 'data/reprocess_yield.json');
+  }
+  const nameByTypeId = new Map();
+  const typeIdByName = new Map();
+  for (const [nm, info] of Object.entries(INV_TYPES || {})) {
+    const tid = (info && (info.typeID ?? info.typeId)) | 0;
+    if (tid) { nameByTypeId.set(tid, nm); typeIdByName.set(nm, tid); }
+  }
+  const minerals = new Set();
+  for (const nm of allNames) {
+    const tid = typeIdByName.get(nm);
+    if (!tid) continue;
+    const parts = (REPROCESS_YIELD && REPROCESS_YIELD[tid]) || [];
+    for (const m of (Array.isArray(parts) ? parts : [])) {
+      const mtid = (m && (m.typeID ?? m.typeId)) | 0;
+      if (!mtid) continue;
+      const mname = m.name || nameByTypeId.get(mtid);
+      if (mname) minerals.add(mname);
+    }
+  }
+  allNames = Array.from(new Set([...allNames, ...minerals]));
+} catch (e) {
+  console.warn('materials union failed (continuing with items only)', e);
+}
+     const materialBatches = [];
       for (let i = 0; i < allNames.length; i += batchSize)
         materialBatches.push(allNames.slice(i, i + batchSize));
 
@@ -819,3 +880,33 @@ wireStandingInput(els.corpIn);
   updateOrderUpdatesVisibility();
   updateResults();
 });
+
+
+// === Order updates integer-only guard (v7) ===
+(function(){
+  function bindInt(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    const nav = ['Backspace','Delete','ArrowLeft','ArrowRight','Home','End','Tab'];
+    el.addEventListener('keydown', (e) => {
+      if (nav.includes(e.key)) return;
+      if (/^[0-9]$/.test(e.key)) return;
+      e.preventDefault();
+    });
+    el.addEventListener('input', () => {
+      const digits = (el.value || '').replace(/\D+/g, '');
+      el.value = digits === '' ? '' : String(Math.max(1, parseInt(digits, 10)));
+    });
+    el.addEventListener('paste', (e) => {
+      const data = (e.clipboardData || window.clipboardData).getData('text');
+      if (!/^\d+$/.test(data)) e.preventDefault();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => bindInt('order_updates'));
+  } else {
+    bindInt('order_updates');
+  }
+})();
+// === End order updates guard (v7) ===
+
