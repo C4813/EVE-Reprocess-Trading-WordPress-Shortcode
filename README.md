@@ -33,43 +33,43 @@ _Price data will be called from the selected trade hub and the region that hub b
 ### Skills
 _Drop-down value_ `0-5`
 
-**Accounting** reduces sales tax<br/>
-**Broker Relations** reduces brokerage fee<br/>
-**Advanced Broker Relations** reduces relist fee<br/>
-**Connections** increases effective standing if the base standing is positive. Effective faction and corp standing reduces brokerage fee; effective corp standing reduces reprocessing tax. At effective corp standing of 6.67, reprocessing tax is 0%.<br/>
-**Diplomacy** increases effective standing if the base standing is negative.<br/>
-**Scrapmetal Processing** increases the reprocessing yield from 50% at level 0 to 55% at level 5.<br/>
+- **Accounting** reduces sales tax<br/>
+- **Broker Relations** reduces brokerage fee<br/>
+- **Advanced Broker Relations** reduces relist fee<br/>
+- **Connections** increases effective standing if the base standing is positive. Effective faction and corp standing reduces brokerage fee; effective corp standing reduces reprocessing tax. At effective corp standing of 6.67, reprocessing tax is 0%.<br/>
+- **Diplomacy** increases effective standing if the base standing is negative.<br/>
+- **Scrapmetal Processing** increases the reprocessing yield from 50% at level 0 to 55% at level 5.<br/>
 
 ### Standings
 _Values between_ `-10.00` _and_ `+10.00`<br/>
 _Effective standing, fees, taxes and yield are automatically calculated._
 
 ### Item filters
-**Filter Market Group** allows you to select which market group to look at (Ship Equipment, Drones, Ships, etc.)<br/>
-**Exclude T2?** excludes T2 items.<br/><br/>
+- **Filter Market Group** allows you to select which market group to look at (Ship Equipment, Drones, Ships, etc.)<br/>
+- **Exclude T2?** excludes T2 items.<br/><br/>
 _These options show only under specific circumstances._<br/>
-**Exclude Capital-Sized?** excludes capital-sized items in the list<br/>
-**Exclude T1 Modules?** excludes modules which have a blueprint (to show meta-only)<br/>
+- **Exclude Capital-Sized?** excludes capital-sized items in the list<br/>
+- **Exclude T1 Modules?** excludes modules which have a blueprint (to show meta-only)<br/>
 
 ### Generate List Button
 _Generates the item list based on all of the inputs above the button._
 
 ### Basic Settings
-**Include Secondary Trade Hubs?** includes the chosen `Trade Hub`'s secondary market. (Perimeter/Ashab/Frarn/Nakugard/Botane).<br/>
-**Sell To** select how you are selling your yielded materials.<br/>
-**Minimum Margin %** filter results to show only those with the set minimum margin.<br/>
-**Maximum Margin %** filter results to show only those with the set maximum margin.<br/>
-**Minimum Daily Volume** filter results to show only those with the set minimum daily volume (daily volume is the average daily volume, over 7 days, for the region the trade hub is located in).<br/>
-**Stack Size** if you reprocess a single item you may lose materials. If the stack size is 100, you get those materials. (i.e. you can't 5% 5, but you can 5% 100).
+- **Include Secondary Trade Hubs?** includes the chosen `Trade Hub`'s secondary market. (Perimeter/Ashab/Frarn/Nakugard/Botane).<br/>
+- **Sell To** select how you are selling your yielded materials.<br/>
+- **Minimum Margin %** filter results to show only those with the set minimum margin.<br/>
+- **Maximum Margin %** filter results to show only those with the set maximum margin.<br/>
+- **Minimum Daily Volume** filter results to show only those with the set minimum daily volume (daily volume is the average daily volume, over 7 days, for the region the trade hub is located in).<br/>
+- **Stack Size** if you reprocess a single item you may lose materials. If the stack size is 100, you get those materials. (i.e. you can't 5% 5, but you can 5% 100).
 
 ### Advanced Settings
-**Buy order QTY recommendations?**<br/>
-If `Yes`<br/>
-**% of Daily Volume** updates the final result to show your inputted percentage of the daily volume, not the daily volume.<br/>
-**Re-list brokerage fees?**<br/>
-If `Yes`<br/>
-**Order updates** how many times do you expect to update your order? This calculates the re-list fee.<br/>
-_This is not exact, but helps provide a more accurate item value._
+- **Buy order QTY recommendations?**<br/>
+  If `Yes`<br/>
+- **% of Daily Volume** updates the final result to show your inputted percentage of the daily volume, not the daily volume.<br/>
+- **Re-list brokerage fees?**<br/>
+  If `Yes`<br/>
+- **Order updates** how many times do you expect to update your order? This calculates the re-list fee.<br/>
+  _This is not exact, but helps provide a more accurate item value._
 
 ### Generate Prices
 Generates prices based on all of the above basic and advanced settings.<br/>
