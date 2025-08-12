@@ -2,17 +2,16 @@
 // Bootstrap WordPress for wp_upload_dir()
 require_once dirname(__DIR__, 3) . '/wp-load.php';
 if (!defined('ABSPATH')) {
-    header('HTTP/1.1 403 Forbidden');
+
     exit;
 }
 
-header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-header('Pragma: no-cache');
-header('Expires: 0');
-header('Content-Type: application/json; charset=utf-8');
-header('X-Content-Type-Options: nosniff');
-header('Referrer-Policy: same-origin');
-header('Cross-Origin-Resource-Policy: same-origin');
+
+
+
+
+
+
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
 // Helper in case trailingslashit() is not defined
@@ -29,6 +28,13 @@ $chunk_size = 150;
 $api_url = "https://esi.evetech.net/latest/markets/prices/";
 $base_path = $cache_dir . "adjusted_prices";
 
+
+// AUTO: if no adjusted_prices chunks exist yet, perform a refresh build
+$__auto_missing = true;
+for ($__i = 1; $__i <= 3; $__i++) {
+    if (is_file("{$base_path}_" . $__i . ".json")) { $__auto_missing = false; break; }
+}
+if ($__auto_missing && empty($_GET['refresh'])) { $_GET['refresh'] = 1; }
 // Ensure cache directory exists **before** touching files
 if (!is_dir($cache_dir)) {
     if (!mkdir($cache_dir, 0755, true) && !is_dir($cache_dir)) {
@@ -44,11 +50,11 @@ $lock_file     = $base_path . '.lock';
 // ensure files exist with safe perms (optional but nice)
 if (!file_exists($throttle_file)) {
     @touch($throttle_file);
-    @chmod($throttle_file, 0640);
+    chmod($throttle_file, 0644);
 }
 if (!file_exists($lock_file)) {
     @touch($lock_file);
-    @chmod($lock_file, 0640);
+    chmod($lock_file, 0644);
 }
 
 
@@ -149,9 +155,9 @@ foreach ($chunks as $i => $chunk) {
         echo json_encode(['ok' => false, 'error' => "Failed to write cache file {$file}"], JSON_UNESCAPED_SLASHES);
         exit;
     }
-    @chmod($file, 0640);
+    @chmod($file, 0644);
     @touch($throttle_file);
-    @chmod($throttle_file, 0640);
+    chmod($throttle_file, 0644);
 }
 
 // Respond with the full chunked data
