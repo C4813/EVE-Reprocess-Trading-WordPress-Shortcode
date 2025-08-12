@@ -1,6 +1,6 @@
 /* ==========================================================================
    EVE Reprocess Trading – Styles
-   Cleaned, consistent, and responsive
+   Clean, consistent, and responsive
    ========================================================================== */
 
 /* ------------------------------
@@ -114,10 +114,10 @@
 
 /* Keep native select arrow & styling */
 select.eve-input {
-  -webkit-appearance: auto; /* Safari / iOS */
-  -moz-appearance: auto;    /* Firefox */
-  appearance: auto;         /* Modern browsers */
-  padding-right: 24px;       /* space for arrow */
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  padding-right: 24px;
   text-align: center;
 }
 
@@ -132,19 +132,42 @@ select.eve-input {
 /* ------------------------------
    Result Cards
    ------------------------------ */
-#result_main,
 #faction_standing_result,
 #corp_standing_result,
-#result_skills {
-  display: inline-block;
-  width: auto;
-  max-width: 100%;
+#result_skills,
+#result_main {
   background: var(--box-bg);
   padding: var(--box-padding-y) var(--box-padding-x);
   border-radius: var(--radius);
-  margin: 4px auto 16px;
   box-sizing: border-box;
   font-size: var(--result-font-size);
+}
+
+/* Effective standing cards - compact, centered */
+#faction_standing_result,
+#corp_standing_result {
+  display: inline-block;
+  width: auto;
+  min-width: 140px;
+  margin: 4px auto;
+  text-align: center;
+}
+
+/* Skills Used box - compact, directly below Effective */
+#result_skills {
+  display: block;
+  width: auto;
+  max-width: fit-content;
+  margin: 8px auto 16px;
+  text-align: center;
+}
+
+/* Brokerage Fee + stats box - compact and centered */
+#result_main {
+  display: inline-block;
+  width: auto;
+  max-width: fit-content;
+  margin: 4px auto 16px;
   text-align: center;
 }
 
@@ -155,10 +178,7 @@ select.eve-input {
   text-align: center;
   margin: 0 auto;
 }
-.skills-row {
-  display: block;
-  text-align: center;
-}
+.skills-row { display: block; text-align: center; }
 
 /* ------------------------------
    Buttons & Loading
@@ -230,20 +250,17 @@ select.eve-input {
 /* ------------------------------
    Generated List (left aligned)
    ------------------------------ */
-#market_group_results_wrapper {
-  text-align: left; /* ensures content inside is left aligned */
-}
+#market_group_results_wrapper { text-align: left; }
 
-/* Pretty list formatting */
 #market_group_results {
   list-style: disc;
   margin: 0 auto var(--gap);
-  padding-left: 20px;     /* bullet indent */
-  max-width: 820px;       /* readable line length */
+  padding-left: 20px;
+  max-width: 820px;
 }
 #market_group_results li {
   text-align: left;
-  word-break: break-word; /* prevent overflow with very long names */
+  word-break: break-word;
 }
 
 /* ------------------------------
