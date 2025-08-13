@@ -44,6 +44,10 @@ function getReprocessMineralNames(tid, nameByTypeId) {
     groupResults: $('market_group_results'),
     groupResultsWrap: $('market_group_results_wrapper'),
 
+    potentialProfitWrap: $('potential_profit_wrapper'),
+    potentialProfitLabel: $('potential_profit_label'),
+    potentialProfitValue: $('potential_profit_value'),
+
     standingWrap: $('standing_inputs_wrapper'),
     skillsBox: $('result_skills'),
     factionLabel: $('faction_label'),
@@ -90,18 +94,17 @@ function getReprocessMineralNames(tid, nameByTypeId) {
   };
   Object.freeze(els);
 
-  // Hide 'Exclude T2?' when market group is Implants (value '24')
+  // Hide 'Exclude T2?' when market group is Implants (value '27')
   function updateT2VisibilityForGroup() {
     try {
       if (!els.t2Toggle || !els.groupSel) return;
-      const isImplants = String(els.groupSel.value) === '24';
+      const isImplants = String(els.groupSel.value) === '27';
       const wrap = els.t2Toggle.parentElement || null;
       if (!wrap) return;
       wrap.classList.toggle('hidden', isImplants);
-    } catch (e) {
-      /* no-op */
-    }
+    } catch (e) { /* no-op */ }
   }
+
 
   // Show/hide helpers
   const hide = (...x) => x.forEach(e => e && (e.classList.add('hidden')));
@@ -137,7 +140,7 @@ function getReprocessMineralNames(tid, nameByTypeId) {
       els.genPrices, els.copyQuickbar, els.afterGen,
       els.noResults,
       els.minVol?.parentElement, els.stack?.parentElement,
-      els.buyQtyWrap, els.buyQtyPercWrap, els.orderUpdatesWrap, els.relistFeesWrap
+      els.buyQtyWrap, els.buyQtyPercWrap, els.orderUpdatesWrap, els.relistFeesWrap, els.potentialProfitWrap
     );
     genPricesBtnReset && genPricesBtnReset();
     needRegenerate = false;
@@ -145,7 +148,7 @@ function getReprocessMineralNames(tid, nameByTypeId) {
   }
 
   function hideMarketGroupResultsOnly() {
-    hide(els.copyQuickbar, els.noResults, els.groupResultsWrap);
+    hide(els.copyQuickbar, els.noResults, els.groupResultsWrap, els.potentialProfitWrap); // ⬅ add this
     setGenPricesBtnRegenerate && setGenPricesBtnRegenerate();
     needRegenerate = true;
   }
@@ -316,12 +319,6 @@ wireStandingInput(els.corpIn);
     hide(els.minVol?.parentElement, els.stack?.parentElement, els.buyQtyWrap, els.buyQtyPercWrap, els.relistFeesWrap);
     updateFiltersVisibility();
   }));
-  
-  // Ensure correct visibility on load
-  updateT2VisibilityForGroup();
-
-  // Update visibility when market group changes
-  if (els.groupSel) els.groupSel.addEventListener('change', updateT2VisibilityForGroup);
 
   [
     els.includeSec, els.sellTo, els.minMargin, els.maxMargin,
@@ -393,6 +390,18 @@ wireStandingInput(els.corpIn);
     }
     return marketGroupID;
   }
+  
+  // Returns true if marketGroupID is the same as or a descendant of rootGroupID
+  function isInGroupTree(marketGroupID, rootGroupID) {
+    let current = marketGroups[String(marketGroupID)];
+    while (current) {
+      if (String(marketGroupID) === String(rootGroupID)) return true;
+      if (current.parentGroupID === "None") break;
+      marketGroupID = current.parentGroupID;
+      current = marketGroups[String(marketGroupID)];
+    }
+    return false;
+  }
 
   function hasValidMetaGroup(typeID) {
     const entry = metaTypes[typeID];
@@ -440,7 +449,13 @@ wireStandingInput(els.corpIn);
         Object.entries(invTypes)
           .filter(([name, item]) => {
             const topGroup = item.marketGroupID ? getTopLevelGroup(item.marketGroupID) : null;
-            if (topGroup !== selectedTopGroup) return false;
+            // Special-case exact Implants group: when selectedTopGroup is '27', require exact match
+            if (selectedTopGroup === '27') {
+              // Include items in Implants (27) or any of its descendants
+              if (!isInGroupTree(item.marketGroupID, '27')) return false;
+            } else {
+              if (topGroup !== selectedTopGroup) return false;
+            }
             if (!hasValidMetaGroup(item.typeID)) return false;
             if (!item.published) return false;
             if (els.excludeT1 && els.excludeT1.value === 'yes' && selectedTopGroup === '9') {
@@ -487,9 +502,10 @@ wireStandingInput(els.corpIn);
         if (els.stack) show(els.stack.parentElement);
         if (els.buyQtyWrap) show(els.buyQtyWrap);
         if (els.buyQty && els.buyQty.value === 'yes' && els.buyQtyPercWrap) show(els.buyQtyPercWrap);
-        if (els.buyQty && els.buyQty.value === 'yes' && els.relistFeesWrap) show(els.relistFeesWrap);
 
-        genPricesBtnReset();
+        
+        if (els.buyQty && els.buyQty.value === 'yes' && els.relistFeesWrap) show(els.relistFeesWrap);
+genPricesBtnReset();
         needRegenerate = false;
         els.generate.disabled = false;
         els.generate.classList.remove('loading');
@@ -539,10 +555,70 @@ wireStandingInput(els.corpIn);
   }
 
 
-  function maybeShowCopyMarketQuickbar() {
+  
+  function computePotentialProfit() {
+    try {
+      const { enabled: buyQtyEnabled, percent: buyQtyPercent } = getBuyQtySettings();
+      const labelText = buyQtyEnabled ? 'Potential Daily Profit:' : 'Potential Profit:';
+      if (els.potentialProfitLabel) els.potentialProfitLabel.textContent = labelText;
+
+      let totalProfit = 0;
+      const sellTo = els.sellTo?.value === 'sell' ? 'sell' : 'buy';
+      const stackSize = Math.max(1, parseInt(els.stack?.value || '1', 10));
+
+      /* use live price maps */
+
+      const salesTaxRate = Math.max(0, parseFloat(els.salesTax?.textContent || '0')) / 100;
+      const reprocessTaxRate = Math.max(0, parseFloat(els.tax?.textContent || '0')) / 100;
+      const brokerageFeeRate = Math.max(0, parseFloat(els.brokerFee?.textContent || '0')) / 100;
+
+      Array.from(els.groupResults.querySelectorAll('li')).forEach(li => {
+        if (li.style.display === 'none' || li.querySelector('em')) return;
+
+        let components = [];
+        try { components = JSON.parse(li.getAttribute('data-components') || '[]'); } catch {}
+
+        let totalYieldValue = 0;
+        components.forEach(({ mineralName, perItemQty }) => {
+          const totalQty = Math.floor(perItemQty * stackSize);
+          if (totalQty < 1) return;
+          const price = sellTo === 'sell'
+            ? (currentSellPrices[mineralName] ?? 0)
+            : (currentMaterialPrices[mineralName] ?? 0);
+          totalYieldValue += totalQty * price;
+        });
+
+        const yieldAfterReprocess = totalYieldValue * (1 - reprocessTaxRate);
+
+        let sellProceeds = yieldAfterReprocess * (1 - salesTaxRate);
+        if (sellTo === 'sell') sellProceeds *= (1 - brokerageFeeRate);
+
+        const itemBuyPrice = parseFloat(li.getAttribute('data-buy') || '0') || 0;
+        const buyCost = itemBuyPrice * (1 + brokerageFeeRate);
+
+        const perItemProfit = sellProceeds - buyCost;
+
+        const volume = parseInt(li.getAttribute('data-volume') || '0', 10) || 0;
+        const { enabled: buyQtyEnabled2, percent: buyQtyPercent2 } = getBuyQtySettings();
+        const qty = buyQtyEnabled2 ? Math.round(volume * buyQtyPercent2) : volume;
+
+        if (qty > 0) totalProfit += perItemProfit * qty;
+      });
+
+      if (els.potentialProfitWrap && els.potentialProfitValue) {
+        els.potentialProfitValue.textContent = Math.floor(totalProfit).toLocaleString();
+        show(els.potentialProfitWrap);
+      }
+    } catch (e) {
+      console.warn('Potential Profit calc failed', e);
+      els.potentialProfitWrap && hide(els.potentialProfitWrap);
+    }
+  }
+function maybeShowCopyMarketQuickbar() {
     const visibleItems = Array.from(els.groupResults.querySelectorAll('li'))
       .filter(li => li.style.display !== 'none' && !li.querySelector('em'));
     els.copyQuickbar.classList.toggle('hidden', !visibleItems.length);
+    if (!visibleItems.length) { els.potentialProfitWrap && hide(els.potentialProfitWrap); } else { computePotentialProfit(); }
   }
 
   function getNextOrderValue(current, steps = 5) {
@@ -772,6 +848,89 @@ try {
       els.genPrices.classList.remove('loading');
       genPricesBtnReset();
       maybeShowCopyMarketQuickbar();
+      computePotentialProfit();
+      // Compute Potential Profit/Daily Profit (moved to function)
+      try {
+        const { enabled: buyQtyEnabled, percent: buyQtyPercent } = getBuyQtySettings();
+        const labelText = buyQtyEnabled ? 'Potential Daily Profit:' : 'Potential Profit:';
+        if (els.potentialProfitLabel) els.potentialProfitLabel.textContent = labelText;
+        let totalProfit = 0;
+        Array.from(els.groupResults.querySelectorAll('li')).forEach(li => {
+          if (li.style.display === 'none' || li.querySelector('em')) return;
+          const itemName = li.getAttribute('data-name') || '';
+          let components = [];
+          try { components = JSON.parse(li.getAttribute('data-components') || '[]'); } catch {}
+          const stackSize = Math.max(1, parseInt(els.stack?.value || '1', 10));
+          /* using live price maps */
+          const sellTo = els.sellTo?.value === 'sell' ? 'sell' : 'buy';
+
+          let totalYieldValue = 0, adjustedValue = 0;
+          components.forEach(({ mineralName, perItemQty }) => {
+            const totalQty = Math.floor(perItemQty * stackSize);
+            if (totalQty < 1) return;
+            const price = sellTo === 'sell' ? (currentSellPrices[mineralName] ?? 0) : (currentMaterialPrices[mineralName] ?? 0);
+            totalYieldValue += totalQty * price;
+            const typeID = invTypes[mineralName]?.typeID;
+            if (typeID && adjustedPricesByTypeID[typeID])
+              adjustedValue += totalQty * adjustedPricesByTypeID[typeID];
+          });
+
+          const reprocessTaxText = els.tax.textContent || "0%";
+          const reprocessTaxMatch = reprocessTaxText.match(/([\d.]+)%/);
+          const reprocessTaxRate = reprocessTaxMatch ? parseFloat(reprocessTaxMatch[1]) / 100 : 0;
+          const taxAmount = adjustedValue * reprocessTaxRate;
+          const netTotal = stackSize > 0 ? (totalYieldValue - taxAmount) / stackSize : 0;
+
+          const itemBuyPrice = currentMaterialPrices[itemName] ?? 0;
+          const volume = currentVolumes[itemName] ?? 0;
+
+          const brokerFeeText = els.brokerFee.textContent || "0%";
+          const brokerFeeMatch = brokerFeeText.match(/([\d.]+)%/);
+          const brokerageFeeRate = brokerFeeMatch ? parseFloat(brokerFeeMatch[1]) / 100 : 0;
+
+          const salesTaxText = els.salesTax.textContent || "0%";
+          const salesTaxMatch = salesTaxText.match(/([\d.]+)%/);
+          const salesTaxRate = salesTaxMatch ? parseFloat(salesTaxMatch[1]) / 100 : 0;
+
+          let sellProceeds = netTotal;
+          if (sellTo === 'buy') sellProceeds = sellProceeds * (1 - salesTaxRate);
+          else if (sellTo === 'sell') sellProceeds = sellProceeds * (1 - brokerageFeeRate) * (1 - salesTaxRate);
+
+          const itemBrokerage = itemBuyPrice * brokerageFeeRate;
+
+          let relistFeeTotal = 0;
+          if (
+            els.buyQty && els.buyQty.value === 'yes' &&
+            els.relistFees && els.relistFees.value === 'yes' &&
+            els.orderUpdates && !isNaN(parseInt(els.orderUpdates.value)) && parseInt(els.orderUpdates.value) > 0
+          ) {
+            const updates = parseInt(els.orderUpdates.value);
+            const advBrokerLvl = parseInt(els.skillBrokerAdv?.value || 0);
+            const brokerFee = brokerageFeeRate;
+            let orderValue = itemBuyPrice;
+            for (let u = 0; u < updates; ++u) {
+              const newOrderValue = getNextOrderValue(orderValue, 5);
+              const fee = calculateRelistFee(orderValue, newOrderValue, brokerFee, advBrokerLvl);
+              relistFeeTotal += fee;
+              orderValue = newOrderValue;
+            }
+            sellProceeds -= relistFeeTotal;
+          }
+
+          const perItemProfit = (sellProceeds - itemBrokerage) - itemBuyPrice;
+          const qty = buyQtyEnabled ? Math.round(volume * buyQtyPercent) : volume;
+          if (qty > 0) totalProfit += perItemProfit * qty;
+        });
+
+        if (els.potentialProfitWrap && els.potentialProfitValue) {
+          els.potentialProfitValue.textContent = Math.floor(totalProfit).toLocaleString();
+          show(els.potentialProfitWrap);
+        }
+      } catch (e) {
+        console.warn('Potential Profit calc failed', e);
+        els.potentialProfitWrap && hide(els.potentialProfitWrap);
+      }
+
       show(els.groupResultsWrap);
     })();
   }
@@ -899,6 +1058,10 @@ try {
   genPricesBtnReset();
   updateOrderUpdatesVisibility();
   updateResults();
+  // Ensure correct visibility on initial load
+  updateT2VisibilityForGroup();
+  // Update when market group changes
+  if (els.groupSel) els.groupSel.addEventListener('change', updateT2VisibilityForGroup);
 });
 
 
@@ -928,5 +1091,5 @@ try {
     bindInt('order_updates');
   }
 })();
-// === End order updates guard (v7) ===
 
+// === End order updates guard (v7) ===
