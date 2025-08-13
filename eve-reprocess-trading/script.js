@@ -90,6 +90,19 @@ function getReprocessMineralNames(tid, nameByTypeId) {
   };
   Object.freeze(els);
 
+  // Hide 'Exclude T2?' when market group is Implants (value '24')
+  function updateT2VisibilityForGroup() {
+    try {
+      if (!els.t2Toggle || !els.groupSel) return;
+      const isImplants = String(els.groupSel.value) === '24';
+      const wrap = els.t2Toggle.parentElement || null;
+      if (!wrap) return;
+      wrap.classList.toggle('hidden', isImplants);
+    } catch (e) {
+      /* no-op */
+    }
+  }
+
   // Show/hide helpers
   const hide = (...x) => x.forEach(e => e && (e.classList.add('hidden')));
   const show = (...x) => x.forEach(e => e && (e.classList.remove('hidden')));
@@ -303,6 +316,12 @@ wireStandingInput(els.corpIn);
     hide(els.minVol?.parentElement, els.stack?.parentElement, els.buyQtyWrap, els.buyQtyPercWrap, els.relistFeesWrap);
     updateFiltersVisibility();
   }));
+  
+  // Ensure correct visibility on load
+  updateT2VisibilityForGroup();
+
+  // Update visibility when market group changes
+  if (els.groupSel) els.groupSel.addEventListener('change', updateT2VisibilityForGroup);
 
   [
     els.includeSec, els.sellTo, els.minMargin, els.maxMargin,
@@ -468,6 +487,7 @@ wireStandingInput(els.corpIn);
         if (els.stack) show(els.stack.parentElement);
         if (els.buyQtyWrap) show(els.buyQtyWrap);
         if (els.buyQty && els.buyQty.value === 'yes' && els.buyQtyPercWrap) show(els.buyQtyPercWrap);
+        if (els.buyQty && els.buyQty.value === 'yes' && els.relistFeesWrap) show(els.relistFeesWrap);
 
         genPricesBtnReset();
         needRegenerate = false;
