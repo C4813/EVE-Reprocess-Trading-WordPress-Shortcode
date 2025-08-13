@@ -92,6 +92,19 @@ function getReprocessMineralNames(tid, nameByTypeId) {
     skill_diplomacy: $('skill_diplomacy'),
     skill_scrapmetal: $('skill_scrapmetal')
   };
+  
+  // Auto-select contents on click/focus for standing inputs
+  [els.factionIn, els.corpIn].forEach(input => {
+    if (input) {
+      input.addEventListener('focus', function () {
+        this.select();
+      });
+      input.addEventListener('click', function () {
+        this.select();
+      });
+    }
+  });
+
   Object.freeze(els);
 
   // Hide 'Exclude T2?' when market group is Implants (value '27')
