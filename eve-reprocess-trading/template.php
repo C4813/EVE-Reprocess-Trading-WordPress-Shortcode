@@ -70,7 +70,7 @@
       <select id="market_group_select" class="eve-input">
         <option value="11">Ammunition & Charges</option>
         <option value="157">Drones</option>
-        <option value="27">Implants</option>
+        <option value="24">Implants</option>
         <option value="4">Ships</option>
         <option value="9" selected>Ship Equipment</option>
         <option value="955">Ship and Module Modifications</option>
