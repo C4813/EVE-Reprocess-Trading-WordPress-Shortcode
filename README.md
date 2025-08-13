@@ -92,6 +92,3 @@ The item price value will be omitted from the data copied to the clipboard. This
 #### Example in-game quickbar:
 `Item Name [Reprocessed Value|Regional Volume|Margin%]`<br/>
 `Medium Armor Maintenance Bot I [36195|281|19.81%]`
-
-## Post-release
-- [ ] Investigate using a centralised database which calls price data, and the plugin calls from the database. (This will dramatically decrease price fetch times)
