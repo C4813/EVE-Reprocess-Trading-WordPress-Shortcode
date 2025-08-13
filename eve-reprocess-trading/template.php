@@ -70,7 +70,7 @@
       <select id="market_group_select" class="eve-input">
         <option value="11">Ammunition & Charges</option>
         <option value="157">Drones</option>
-        <option value="24">Implants</option>
+        <option value="27">Implants</option>
         <option value="4">Ships</option>
         <option value="9" selected>Ship Equipment</option>
         <option value="955">Ship and Module Modifications</option>
@@ -174,14 +174,20 @@
         <button id="generate_prices_btn" class="eve-btn hidden">Generate Prices</button>
     </div>
     <div class="erp-center mt-12" id="quickbar-btn-wrapper">
-        <button id="copy_market_quickbar_btn" class="eve-btn hidden">Copy Market Quickbar</button>
+      <button id="copy_market_quickbar_btn" class="eve-btn hidden">Copy Market Quickbar</button>
     </div>
-
-  <!-- Item Breakdown -->
-  <div id="market_group_results_wrapper" class="erp-breakdown hidden">
-    <h3>Items in Selected Market Group</h3>
-    <ul id="market_group_results"></ul>
-  </div>
+    
+    <!-- Potential Profit helper (shows under Quickbar, above items) -->
+    <div id="potential_profit_wrapper" class="erp-center hidden">
+      <strong id="potential_profit_label">Potential Profit:</strong>
+      <span id="potential_profit_value">0</span>
+    </div>
+    
+    <!-- Item Breakdown -->
+    <div id="market_group_results_wrapper" class="erp-breakdown hidden">
+        <h3>Items in Selected Market Group</h3>
+        <ul id="market_group_results"></ul>
+    </div>
 
   <!-- No Results -->
   <div id="no_results_message" class="erp-center erp-error hidden">
