@@ -15,6 +15,8 @@ A secondary shortcode `[eve_reprocess_clear_cache]` can be used to display a but
 - Adjusted price data if the cache is greater than 24 hours old
 - Price data if the cache is greater than 6 hours old
 - Cache files are automatically generated and saved to `wp-content/uploads/eve-reprocess-trading/cache`
+### Down-time ESI protection
+*Please note, the plugin is hard-coded not to send any ESI requests between 10:55 and 11:30 UTC due to ESI is unreliable during down-time*
 ## Detailed User Manual
 ### On Page Load
 You will see trade hub selection, skills and standings input, and market group selection and filters.
