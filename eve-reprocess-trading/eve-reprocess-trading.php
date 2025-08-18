@@ -2,7 +2,7 @@
 /*
 Plugin Name: EVE Reprocess Trading
 Description: Displays trade hub mineral prices, brokerage and tax estimates based on skills and standings.
-Version: 2.2
+Version: 2.3.1
 Author: C4813
 */
 
@@ -11,7 +11,7 @@ defined('ABSPATH') || exit;
 
 require_once __DIR__ . '/inc/ert-utils.php';
 if (!defined('ERT_VERSION')) {
-    define('ERT_VERSION', '2.0');
+    define('ERT_VERSION', '2.3.1');
 }
 
 function ert_plugin_path(): string { return plugin_dir_path(__FILE__); }
