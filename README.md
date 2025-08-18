@@ -2,6 +2,8 @@
 
 Adds a shortcode `[eve_reprocess_trading]` to display a tool for calculating reprocess trading margins in all five major trade hubs, and provides easy import to the in-game market quickbar.
 
+*Due to the nature of the plugin, the shortcode should only be used on pages or posts. Functionality and display cannot be guaranteed if used in other locations, such as, sidebar widget blocks.*
+
 A secondary shortcode `[eve_reprocess_clear_cache]` can be used to display a button which forcibly clears the cache. It will be visible only to administrators (with WordPress `manage_options` capability).
 ## Key Features
 - [x] Trade Hub selection (Including secondary hub consideration, such as Perimeter/Ashab/Frarn/Nakugard/Botane)
