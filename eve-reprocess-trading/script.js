@@ -93,6 +93,27 @@ function getReprocessMineralNames(tid, nameByTypeId) {
     skill_scrapmetal: $('skill_scrapmetal')
   };
   
+  // ---- ESI downtime window (UTC) ----
+  function ertIsDowntimeUtc() {
+    const now = new Date();
+    const hh = now.getUTCHours();
+    const mm = now.getUTCMinutes();
+    return ((hh === 10 && mm >= 55) || (hh === 11 && mm < 30));
+  }
+  function ertShowDowntimeOnGenerateButton() {
+    if (!els || !els.generate) return;
+    const btn = els.generate;
+    btn.classList.add('downtime');
+    while (btn.firstChild) btn.removeChild(btn.firstChild);
+    const l1 = document.createElement('span');
+    l1.textContent = 'Disabled between 10:55 and 11:30 UTC';
+    const l2 = document.createElement('span');
+    l2.textContent = '( downtime +/- )';
+    const l3 = document.createElement('span');
+    l3.textContent = 'ESI is unreliable during this time';
+    btn.append(l1, l2, l3);
+  }
+
   // Auto-select contents on click/focus for standing inputs
   [els.factionIn, els.corpIn].forEach(input => {
     if (input) {
@@ -437,7 +458,7 @@ wireStandingInput(els.corpIn);
 
   // Update Market Group Results
   let needRegenerate = false;
-  els.generate.addEventListener('click', updateMarketGroupResults);
+  els.generate.addEventListener('click', (e) => { if (ertIsDowntimeUtc()) { e.preventDefault(); ertShowDowntimeOnGenerateButton(); return; } updateMarketGroupResults(); });
 
   function updateMarketGroupResults() {
     els.generate.disabled = true;
@@ -1096,7 +1117,9 @@ try {
     el.addEventListener('paste', (e) => {
       const data = (e.clipboardData || window.clipboardData).getData('text');
       if (!/^\d+$/.test(data)) e.preventDefault();
-    });
+    
+  if (ertIsDowntimeUtc()) { ertShowDowntimeOnGenerateButton(); }
+});
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => bindInt('order_updates'));
